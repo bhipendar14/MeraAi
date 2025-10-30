@@ -1,95 +1,176 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { gemini } from '@/lib/ai-gemini'
+import { NextRequest, NextResponse } from "next/server"
+import { gemini } from "@/lib/ai-gemini"
 
-// Mock stock data for demonstration
-const MOCK_STOCKS = {
-  NVDA: {
-    name: "NVIDIA Corporation",
-    price: 875.50,
-    change: 2.45,
-    prices: Array.from({ length: 30 }, (_, i) => ({
-      d: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      v: 850 + Math.random() * 50 + i * 2
-    }))
-  },
-  AAPL: {
-    name: "Apple Inc.",
-    price: 189.25,
-    change: -0.85,
-    prices: Array.from({ length: 30 }, (_, i) => ({
-      d: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      v: 180 + Math.random() * 20 + i * 0.5
-    }))
-  },
-  MSFT: {
-    name: "Microsoft Corporation",
-    price: 415.75,
-    change: 1.25,
-    prices: Array.from({ length: 30 }, (_, i) => ({
-      d: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      v: 400 + Math.random() * 30 + i * 1
-    }))
-  },
-  GOOGL: {
-    name: "Alphabet Inc.",
-    price: 142.50,
-    change: 0.75,
-    prices: Array.from({ length: 30 }, (_, i) => ({
-      d: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      v: 135 + Math.random() * 15 + i * 0.3
-    }))
-  },
-  TSLA: {
-    name: "Tesla, Inc.",
-    price: 248.75,
-    change: -1.85,
-    prices: Array.from({ length: 30 }, (_, i) => ({
-      d: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      v: 240 + Math.random() * 20 + i * 0.8
-    }))
+const ALPHA_VANTAGE_API_KEY = "KKDZ5X4KB5MD0BHT"
+
+// Popular stocks to show when no specific symbol is requested
+const POPULAR_STOCKS = [
+  "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "NFLX", "AMD", "INTC"
+]
+
+async function fetchStockData(symbol: string) {
+  try {
+    // Get current quote
+    const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`
+    const quoteResponse = await fetch(quoteUrl)
+    const quoteData = await quoteResponse.json()
+
+    if (quoteData["Error Message"] || quoteData["Note"]) {
+      throw new Error(quoteData["Error Message"] || "API limit reached")
+    }
+
+    const quote = quoteData["Global Quote"]
+    if (!quote) {
+      throw new Error("No data found for symbol")
+    }
+
+    return {
+      symbol: quote["01. symbol"],
+      price: parseFloat(quote["05. price"]),
+      change: parseFloat(quote["09. change"]),
+      changePercent: parseFloat(quote["10. change percent"].replace("%", "")),
+      volume: parseInt(quote["06. volume"]),
+      previousClose: parseFloat(quote["08. previous close"]),
+      open: parseFloat(quote["02. open"]),
+      high: parseFloat(quote["03. high"]),
+      low: parseFloat(quote["04. low"])
+    }
+  } catch (error) {
+    console.error(`Error fetching data for ${symbol}:`, error)
+    return null
   }
 }
 
-const DEFAULT_STOCKS = ['NVDA', 'AAPL', 'MSFT', 'GOOGL', 'TSLA']
-
-export async function GET(request: NextRequest) {
+async function fetchHistoricalData(symbol: string) {
   try {
-    const { searchParams } = request.nextUrl
-    const symbol = searchParams.get('symbol')?.toUpperCase() || 'NVDA'
+    const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`
+    const response = await fetch(url)
+    const data = await response.json()
 
-    // Get stock data (mock data for now)
-    const stockData = MOCK_STOCKS[symbol as keyof typeof MOCK_STOCKS] || MOCK_STOCKS.NVDA
+    if (data["Error Message"] || data["Note"]) {
+      return []
+    }
+
+    const timeSeries = data["Time Series (Daily)"]
+    if (!timeSeries) {
+      return []
+    }
+
+    // Get last 30 days of data
+    const dates = Object.keys(timeSeries).slice(0, 30).reverse()
+    return dates.map(date => ({
+      d: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      v: parseFloat(timeSeries[date]["4. close"])
+    }))
+  } catch (error) {
+    console.error(`Error fetching historical data for ${symbol}:`, error)
+    return []
+  }
+}
+
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url)
+  const symbol = searchParams.get("symbol") || "AAPL"
+
+  console.log(`[Stocks API] Fetching data for ${symbol}`)
+
+  try {
+    // Fetch current stock data
+    const stockData = await fetchStockData(symbol)
     
-    // Generate list of stocks
-    const list = DEFAULT_STOCKS.map(sym => {
-      const stock = MOCK_STOCKS[sym as keyof typeof MOCK_STOCKS]
-      return {
-        symbol: sym,
-        name: stock.name,
-        price: stock.price,
-        change: stock.change
+    if (!stockData) {
+      return NextResponse.json({
+        prices: [],
+        list: [],
+        summary: `Unable to fetch data for ${symbol}. Please check if the symbol is correct.`,
+        error: "Stock not found"
+      }, { status: 404 })
+    }
+
+    // Fetch historical data for chart
+    const historicalData = await fetchHistoricalData(symbol)
+
+    // Fetch popular stocks for the table
+    const popularStocksData = []
+    for (const stock of POPULAR_STOCKS.slice(0, 8)) { // Limit to 8 to avoid API limits
+      const data = await fetchStockData(stock)
+      if (data) {
+        popularStocksData.push({
+          symbol: data.symbol,
+          name: getCompanyName(data.symbol),
+          price: data.price,
+          change: data.changePercent
+        })
       }
-    })
+      // Add delay to avoid hitting API limits
+      await new Promise(resolve => setTimeout(resolve, 200))
+    }
 
     // Generate AI summary
-    let summary = ''
+    let summary = `${symbol} is currently trading at $${stockData.price.toFixed(2)}.`
+    
     try {
-      summary = await gemini(
-        `Provide a brief market analysis for ${symbol} (${stockData.name}). Current price is $${stockData.price} with a ${stockData.change > 0 ? 'gain' : 'loss'} of ${Math.abs(stockData.change)}%. Keep it under 100 words and focus on key factors affecting the stock.`,
-        true
-      )
+      const summaryPrompt = `Provide a brief 2-3 sentence analysis of ${symbol} stock based on this data:
+      Current Price: $${stockData.price}
+      Change: ${stockData.changePercent.toFixed(2)}%
+      Volume: ${stockData.volume.toLocaleString()}
+      High: $${stockData.high}
+      Low: $${stockData.low}
+      
+      Focus on the price movement and what it might indicate for investors.`
+
+      summary = await gemini(summaryPrompt, true)
     } catch (error) {
-      console.error('Error generating AI summary:', error)
-      summary = `${stockData.name} is currently trading at $${stockData.price}, showing a ${stockData.change > 0 ? 'positive' : 'negative'} movement of ${stockData.change}%. Market conditions and company fundamentals continue to influence trading patterns.`
+      console.error("Failed to generate AI summary:", error)
+      const trend = stockData.changePercent >= 0 ? "gaining" : "declining"
+      const trendEmoji = stockData.changePercent >= 0 ? "📈" : "📉"
+      summary = `${trendEmoji} ${symbol} is currently ${trend} ${Math.abs(stockData.changePercent).toFixed(2)}% today, trading at $${stockData.price.toFixed(2)}. The stock has a daily range of $${stockData.low.toFixed(2)} - $${stockData.high.toFixed(2)} with volume of ${stockData.volume.toLocaleString()} shares.`
     }
 
     return NextResponse.json({
-      prices: stockData.prices,
-      list,
-      summary
+      prices: historicalData,
+      list: popularStocksData,
+      summary,
+      currentStock: {
+        symbol: stockData.symbol,
+        price: stockData.price,
+        change: stockData.changePercent,
+        volume: stockData.volume,
+        high: stockData.high,
+        low: stockData.low,
+        open: stockData.open
+      }
     })
-  } catch (error) {
-    console.error('Error in stocks API:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+
+  } catch (error: any) {
+    console.error('[Stocks API] Error:', error)
+    return NextResponse.json({
+      prices: [],
+      list: [],
+      summary: `Unable to load stock data at the moment. This might be due to API limits or network issues. Please try again later.`,
+      error: error.message
+    }, { status: 500 })
   }
+}
+
+function getCompanyName(symbol: string): string {
+  const companies: { [key: string]: string } = {
+    "AAPL": "Apple Inc.",
+    "MSFT": "Microsoft Corporation",
+    "GOOGL": "Alphabet Inc.",
+    "AMZN": "Amazon.com Inc.",
+    "TSLA": "Tesla Inc.",
+    "NVDA": "NVIDIA Corporation",
+    "META": "Meta Platforms Inc.",
+    "NFLX": "Netflix Inc.",
+    "AMD": "Advanced Micro Devices",
+    "INTC": "Intel Corporation",
+    "ORCL": "Oracle Corporation",
+    "CRM": "Salesforce Inc.",
+    "ADBE": "Adobe Inc.",
+    "PYPL": "PayPal Holdings",
+    "UBER": "Uber Technologies",
+    "SPOT": "Spotify Technology"
+  }
+  return companies[symbol] || symbol
 }

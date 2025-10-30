@@ -3,11 +3,12 @@ const GEMINI_API_KEY = "AIzaSyDgfR2hyqxhABpLsVdumR5XKkJscAOAQeY"
 /**
  * Calls Gemini directly via REST API with a prompt and returns text.
  * @param prompt - The prompt to send to Gemini
- * @param useFlash - If true, uses gemini-2.0-flash-lite for speed; otherwise uses gemini-2.0-flash for accuracy
+ * @param useFlash - If true, uses gemini-2.0-flash for speed; otherwise uses gemini-1.5-pro for accuracy
  */
 export async function gemini(prompt: string, useFlash = false) {
 
-  const model = useFlash ? "gemini-2.0-flash-lite" : "gemini-2.0-flash"
+  // Always use gemini-2.0-flash since you have Pro subscription and quota available
+  const model = "gemini-2.0-flash"
   const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${GEMINI_API_KEY}`
 
   console.log("[v0] Calling Gemini API with model:", model)
@@ -33,18 +34,7 @@ export async function gemini(prompt: string, useFlash = false) {
   if (!response.ok) {
     const errorText = await response.text()
     console.error("[v0] Gemini API error:", response.status, errorText)
-
-    // Handle quota exceeded gracefully
-    if (response.status === 429) {
-      const errorData = JSON.parse(errorText)
-      if (errorData.error?.message?.includes("quota")) {
-        console.log("[v0] Daily quota exceeded, returning helpful message")
-        return "I've reached my daily AI quota limit. Please try again tomorrow or the app owner can upgrade to a paid plan for unlimited usage. In the meantime, I can still help with non-AI features!"
-      }
-      return "AI service is temporarily busy. Please try again in a few minutes."
-    }
-
-    throw new Error(`Gemini API error: ${response.status}`)
+    throw new Error(`Gemini API error: ${response.status} - ${errorText}`)
   }
 
   const data = await response.json()
@@ -62,7 +52,7 @@ export async function geminiVision(prompt: string, base64Data: string) {
   const model = "gemini-2.0-flash"
   const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${GEMINI_API_KEY}`
 
-  console.log("[v0] Calling Gemini Vision API")
+  console.log("[v0] Calling Gemini Vision API with model:", model)
 
   // Extract mime type and base64 data
   const matches = base64Data.match(/data:([^;]+);base64,(.+)/)
@@ -100,7 +90,7 @@ export async function geminiVision(prompt: string, base64Data: string) {
   if (!response.ok) {
     const errorText = await response.text()
     console.error("[v0] Gemini Vision API error:", response.status, errorText)
-    throw new Error(`Gemini Vision API error: ${response.status}`)
+    throw new Error(`Gemini Vision API error: ${response.status} - ${errorText}`)
   }
 
   const data = await response.json()

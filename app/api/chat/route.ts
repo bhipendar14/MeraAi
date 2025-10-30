@@ -66,25 +66,8 @@ export async function POST(req: NextRequest) {
       const cleanPrompt = `${sys}\n\nUser: ${userPrompt.trim()}`
       console.log("[v0] Final prompt being sent:", cleanPrompt)
 
-      try {
-        // First try with a very simple test
-        console.log("[v0] Testing with simple 'Hello' prompt")
-        const testResponse = await gemini("Hello", true)
-        console.log("[v0] Simple test worked:", testResponse)
-
-        // Now try the actual prompt
-        text = await gemini(cleanPrompt, false)
-      } catch (promptError: any) {
-        console.error("[v0] Error with full prompt, trying simple version:", promptError.message)
-        // Try with just the user input
-        try {
-          text = await gemini(userPrompt.trim(), true)
-        } catch (simpleError: any) {
-          console.error("[v0] Even simple prompt failed:", simpleError.message)
-          // Last resort - hardcoded response
-          text = "I'm having trouble connecting to the AI service. Please try again in a moment."
-        }
-      }
+      // Use gemini-2.0-flash directly since you have Pro subscription
+      text = await gemini(cleanPrompt, false)
     }
 
     console.log("[v0] Gemini response received")

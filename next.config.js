@@ -10,11 +10,6 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
 
-  // Temporarily disable TypeScript checking for production build
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-
 
 
   // Image optimization
