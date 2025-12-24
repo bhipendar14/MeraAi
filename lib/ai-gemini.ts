@@ -1,4 +1,4 @@
-const GEMINI_API_KEY = "AIzaSyBt3i6JwGMc7SgKVgSSLdNwrsYtu8VNvNA"
+const GEMINI_API_KEY = "AIzaSyB8UN1H9Z035ZyJYohHEjRTgcHez992njU"
 
 /**
  * Calls Gemini directly via REST API with a prompt and returns text.
