@@ -1,4 +1,4 @@
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "AIzaSyAeQZ8GOxlratY70LSztfCuo2gUkULLZ4s"
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 
 /**
  * Simple Gemini API integration

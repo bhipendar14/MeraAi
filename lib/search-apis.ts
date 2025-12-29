@@ -1,6 +1,6 @@
 // YouTube API helper
 export async function searchYouTube(query: string) {
-    const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY || "AIzaSyBs15zGLY0vtpkZey8EjvHEMwbPKAeBzzc"
+    const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY
     const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&maxResults=4&type=video&key=${apiKey}`
 
     try {
@@ -22,7 +22,7 @@ export async function searchYouTube(query: string) {
 
 // Custom Search API for web links and images
 export async function searchGoogle(query: string, searchType: 'web' | 'image' = 'web') {
-    const apiKey = process.env.NEXT_PUBLIC_CUSTOM_SEARCH_API_KEY || "AIzaSyCNEDYF-_R7iFiR2zsizLRg84uozldfvbo"
+    const apiKey = process.env.NEXT_PUBLIC_CUSTOM_SEARCH_API_KEY
     const cx = process.env.NEXT_PUBLIC_CUSTOM_SEARCH_ENGINE_ID || "YOUR_SEARCH_ENGINE_ID" // User needs to create this
 
     const params = new URLSearchParams({

@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
 
 // Get AI response from Gemini
 async function getAIResponse(query: string, file?: { name: string; type: string; data: string }, isGreeting: boolean = false) {
-    const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "AIzaSyAeQZ8GOxlratY70LSztfCuo2gUkULLZ4s"
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY
     const model = "gemini-2.5-flash-lite"
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`
 
@@ -130,7 +130,7 @@ async function getAIResponse(query: string, file?: { name: string; type: string;
 
 // Get YouTube videos
 async function getYouTubeVideos(query: string) {
-    const apiKey = process.env.YOUTUBE_API_KEY || "AIzaSyBs15zGLY0vtpkZey8EjvHEMwbPKAeBzzc"
+    const apiKey = process.env.YOUTUBE_API_KEY
     const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&maxResults=4&type=video&key=${apiKey}`
 
     try {
@@ -161,7 +161,7 @@ async function getYouTubeVideos(query: string) {
 
 // Get Google web links
 async function getGoogleLinks(query: string) {
-    const apiKey = process.env.CUSTOM_SEARCH_API_KEY || "AIzaSyCNEDYF-_R7iFiR2zsizLRg84uozldfvbo"
+    const apiKey = process.env.CUSTOM_SEARCH_API_KEY
     const cx = process.env.CUSTOM_SEARCH_ENGINE_ID || "2263b218e4a6c47fd"
 
     try {

@@ -1,10 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { gemini, extractJson } from "@/lib/ai-gemini"
 
-const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || "AIzaSyAQpx6o0nJHtoVJe5XCEUQE06nkw_A6Dzo"
-const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID || "8e1b98272d2d4f34b1c7d41b3ce0c1fb"
-const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET || "14311604af364de6b135335b2649aaa1"
-const OMDB_API_KEY = process.env.OMDB_API_KEY || "a820102"
+const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY_ID
+const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID
+const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET
+const OMDB_API_KEY = process.env.OMDB_API_KEY
 
 
 // Spotify API functions

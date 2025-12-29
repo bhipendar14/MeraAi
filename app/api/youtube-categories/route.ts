@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { gemini } from "@/lib/ai-gemini"
 
-const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || "AIzaSyAQpx6o0nJHtoVJe5XCEUQE06nkw_A6Dzo" // Fallback (may have quota limits)
+const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY_ID
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)

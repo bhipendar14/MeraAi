@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || "AIzaSyAQpx6o0nJHtoVJe5XCEUQE06nkw_A6Dzo"
+const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY_ID
 
 // Music video categories mapped to search queries
 const MUSIC_CATEGORIES: Record<string, string> = {

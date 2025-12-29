@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { gemini, extractJson } from "@/lib/ai-gemini"
 
-const NEWS_API_KEY = process.env.NEWS_API_KEY || "d9c5b4898d2d4701adf05d3e4eed6c0c"
-const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || "AIzaSyBs15zGLY0vtpkZey8EjvHEMwbPKAeBzzc"
+const NEWS_API_KEY = process.env.NEWS_API_KEY
+const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)

@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Use Gemini to generate intelligent suggestions
-        const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "AIzaSyAZfcM0JLeu5Sywra-6JdbaOQlUmAUOAos"
+        const GEMINI_API_KEY = process.env.GEMINI_API_KEY
         const model = "gemini-2.5-flash-lite"
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`
 
