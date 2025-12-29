@@ -4,11 +4,12 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
-import { Menu, LogOut } from "lucide-react"
+import { Menu, LogOut, Mail } from "lucide-react"
 import { navItems } from "./nav-items"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
 import * as React from "react"
+import Image from "next/image"
 
 export default function MobileNav() {
   const pathname = usePathname()
@@ -35,11 +36,15 @@ export default function MobileNav() {
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="p-0 w-72">
-        <div className="p-4 border-b border-border/60">
-          <div className="h-10 w-10 rounded-full bg-foreground text-background grid place-items-center font-semibold">
-            M
-          </div>
-          <div className="mt-2 text-sm font-medium">MeraAi</div>
+        <div className="p-4 border-b border-border/60 flex items-center gap-3">
+          <Image
+            src="/icon.png"
+            alt="MeraAi"
+            width={40}
+            height={40}
+            className="rounded-full"
+          />
+          <div className="text-sm font-medium">MeraAi</div>
         </div>
         <nav className="px-3 py-4 space-y-1">
           {filteredNavItems.map((item) => {
@@ -62,7 +67,7 @@ export default function MobileNav() {
               </Link>
             )
           })}
-          
+
           {!user && (
             <Link
               href="/auth"
@@ -73,7 +78,7 @@ export default function MobileNav() {
             </Link>
           )}
         </nav>
-        
+
         <div className="mt-auto border-t border-border/60 p-3 space-y-3">
           {user && (
             <div className="space-y-2">
@@ -81,17 +86,33 @@ export default function MobileNav() {
                 <div className="font-medium">{user.name}</div>
                 <div className="capitalize">{user.role}</div>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={logout}
-                className="w-full justify-start"
-              >
-                <LogOut className="size-4 mr-2" />
-                Sign Out
-              </Button>
             </div>
           )}
+
+          {/* Settings Link - Available for all users */}
+          <Link href="/contact" className="block">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start"
+            >
+              <Mail className="size-4 mr-2" />
+              Contact Us
+            </Button>
+          </Link>
+
+          {user && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={logout}
+              className="w-full justify-start"
+            >
+              <LogOut className="size-4 mr-2" />
+              Sign Out
+            </Button>
+          )}
+
           <div className="text-xs text-muted-foreground">MeraAi v1.0</div>
         </div>
       </SheetContent>

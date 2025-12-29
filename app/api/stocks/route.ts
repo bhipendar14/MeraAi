@@ -1,176 +1,408 @@
 import { NextRequest, NextResponse } from "next/server"
 import { gemini } from "@/lib/ai-gemini"
 
-const ALPHA_VANTAGE_API_KEY = "KKDZ5X4KB5MD0BHT"
+// Expanded global stock list (50+ popular stocks)
+const GLOBAL_STOCKS = {
+  // US Tech Giants
+  "AAPL": "Apple Inc.",
+  "MSFT": "Microsoft Corp.",
+  "GOOGL": "Alphabet Inc.",
+  "AMZN": "Amazon.com Inc.",
+  "META": "Meta Platforms Inc.",
+  "TSLA": "Tesla Inc.",
+  "NVDA": "NVIDIA Corp.",
+  "NFLX": "Netflix Inc.",
+  "AMD": "Advanced Micro Devices",
+  "INTC": "Intel Corp.",
 
-// Popular stocks to show when no specific symbol is requested
-const POPULAR_STOCKS = [
-  "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "NFLX", "AMD", "INTC"
-]
+  // US Finance & Others
+  "JPM": "JPMorgan Chase",
+  "BAC": "Bank of America",
+  "WMT": "Walmart Inc.",
+  "V": "Visa Inc.",
+  "MA": "Mastercard Inc.",
+  "DIS": "Walt Disney Co.",
+  "PYPL": "PayPal Holdings",
+  "ADBE": "Adobe Inc.",
+  "CRM": "Salesforce Inc.",
+  "ORCL": "Oracle Corp.",
 
-async function fetchStockData(symbol: string) {
+  // Indian Stocks (NSE)
+  "RELIANCE.NS": "Reliance Industries",
+  "TCS.NS": "Tata Consultancy Services",
+  "HDFCBANK.NS": "HDFC Bank",
+  "INFY.NS": "Infosys Ltd",
+  "ICICIBANK.NS": "ICICI Bank",
+  "HINDUNILVR.NS": "Hindustan Unilever",
+  "ITC.NS": "ITC Ltd",
+  "SBIN.NS": "State Bank of India",
+  "BHARTIARTL.NS": "Bharti Airtel",
+  "WIPRO.NS": "Wipro Ltd",
+
+  // Chinese Stocks
+  "BABA": "Alibaba Group",
+  "BIDU": "Baidu Inc.",
+  "JD": "JD.com Inc.",
+  "PDD": "Pinduoduo Inc.",
+
+  // European Stocks
+  "SAP": "SAP SE",
+  "ASML": "ASML Holding",
+
+  // Japanese Stocks
+  "SONY": "Sony Group Corp.",
+  "TM": "Toyota Motor Corp.",
+
+  // Crypto-related
+  "COIN": "Coinbase Global",
+  "MSTR": "MicroStrategy Inc.",
+
+  // ETFs & Indices
+  "SPY": "S&P 500 ETF",
+  "QQQ": "Nasdaq 100 ETF",
+  "DIA": "Dow Jones ETF"
+}
+
+const TICKER_STOCKS = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "NFLX", "JPM", "V"]
+
+// Currency symbols and country codes for flags
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: "$",
+  INR: "₹",
+  JPY: "¥",
+  GBP: "£",
+  EUR: "€",
+  CNY: "¥"
+}
+
+// Cache for exchange rates (updates daily)
+let exchangeRatesCache: any = null
+let lastFetchTime = 0
+
+// Cache for market movers (updates every 5 minutes)
+let marketMoversCache: any = null
+let marketMoversLastFetch = 0
+
+async function getExchangeRates() {
+  const now = Date.now()
+  const ONE_HOUR = 3600000 // Cache for 1 hour
+
+  if (exchangeRatesCache && (now - lastFetchTime) < ONE_HOUR) {
+    return exchangeRatesCache
+  }
+
   try {
-    // Get current quote
-    const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`
-    const quoteResponse = await fetch(quoteUrl)
-    const quoteData = await quoteResponse.json()
-
-    if (quoteData["Error Message"] || quoteData["Note"]) {
-      throw new Error(quoteData["Error Message"] || "API limit reached")
-    }
-
-    const quote = quoteData["Global Quote"]
-    if (!quote) {
-      throw new Error("No data found for symbol")
-    }
-
-    return {
-      symbol: quote["01. symbol"],
-      price: parseFloat(quote["05. price"]),
-      change: parseFloat(quote["09. change"]),
-      changePercent: parseFloat(quote["10. change percent"].replace("%", "")),
-      volume: parseInt(quote["06. volume"]),
-      previousClose: parseFloat(quote["08. previous close"]),
-      open: parseFloat(quote["02. open"]),
-      high: parseFloat(quote["03. high"]),
-      low: parseFloat(quote["04. low"])
-    }
+    const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD')
+    const data = await response.json()
+    exchangeRatesCache = data.rates
+    lastFetchTime = now
+    return data.rates
   } catch (error) {
-    console.error(`Error fetching data for ${symbol}:`, error)
-    return null
+    console.error('[Stocks API] Failed to fetch exchange rates:', error)
+    // Fallback rates
+    return {
+      USD: 1,
+      INR: 83.5,
+      JPY: 149.5,
+      GBP: 0.79,
+      EUR: 0.92,
+      CNY: 7.24
+    }
   }
 }
 
-async function fetchHistoricalData(symbol: string) {
+async function getMarketMovers() {
+  const now = Date.now()
+  const FIVE_MINUTES = 300000 // Cache for 5 minutes
+
+  if (marketMoversCache && (now - marketMoversLastFetch) < FIVE_MINUTES) {
+    console.log('[Stocks API] Returning cached market movers data')
+    return marketMoversCache
+  }
+
+  const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || ""
+
+  if (!ALPHA_VANTAGE_KEY) {
+    console.warn('[Stocks API] No Alpha Vantage API key found for market movers')
+    return { top_gainers: [], top_losers: [], most_actively_traded: [] }
+  }
+
   try {
-    const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`
-    const response = await fetch(url)
+    console.log('[Stocks API] Fetching fresh market movers data from Alpha Vantage...')
+    const url = `https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey=${ALPHA_VANTAGE_KEY}`
+    const response = await fetch(url, { cache: "no-store" })
     const data = await response.json()
 
-    if (data["Error Message"] || data["Note"]) {
-      return []
+    console.log('[Stocks API] Alpha Vantage response keys:', Object.keys(data))
+
+    // Check if we got rate limited or error
+    if (data.Note || data['Error Message']) {
+      console.error('[Stocks API] Alpha Vantage error:', data.Note || data['Error Message'])
+      return marketMoversCache || { top_gainers: [], top_losers: [], most_actively_traded: [] }
     }
 
-    const timeSeries = data["Time Series (Daily)"]
-    if (!timeSeries) {
-      return []
+    // Validate data structure
+    if (!data.top_gainers && !data.top_losers && !data.most_actively_traded) {
+      console.error('[Stocks API] Invalid data structure from Alpha Vantage')
+      return marketMoversCache || { top_gainers: [], top_losers: [], most_actively_traded: [] }
     }
 
-    // Get last 30 days of data
-    const dates = Object.keys(timeSeries).slice(0, 30).reverse()
-    return dates.map(date => ({
-      d: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      v: parseFloat(timeSeries[date]["4. close"])
-    }))
+    marketMoversCache = data
+    marketMoversLastFetch = now
+    console.log('[Stocks API] Market movers data cached successfully')
+    return data
   } catch (error) {
-    console.error(`Error fetching historical data for ${symbol}:`, error)
-    return []
+    console.error('[Stocks API] Market movers fetch failed:', error)
+    return marketMoversCache || { top_gainers: [], top_losers: [], most_actively_traded: [] }
   }
 }
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
-  const symbol = searchParams.get("symbol") || "AAPL"
+  const action = searchParams.get("action") || "quote"
+  let symbol = (searchParams.get("symbol") || "NVDA").toUpperCase()
+  const currency = searchParams.get("currency") || "USD"
+  const searchQuery = searchParams.get("q") || ""
+  const range = searchParams.get("range") || "1mo"
 
-  console.log(`[Stocks API] Fetching data for ${symbol}`)
+  // Map common Indian stock symbols to their NSE equivalents
+  const indianStockMap: Record<string, string> = {
+    "TCS": "TCS.NS",
+    "RELIANCE": "RELIANCE.NS",
+    "INFY": "INFY.NS",
+    "INFOSYS": "INFY.NS",
+    "HDFCBANK": "HDFCBANK.NS",
+    "HDFC": "HDFCBANK.NS",
+    "ICICIBANK": "ICICIBANK.NS",
+    "ICICI": "ICICIBANK.NS",
+    "WIPRO": "WIPRO.NS",
+    "SBIN": "SBIN.NS",
+    "ITC": "ITC.NS",
+    "BHARTIARTL": "BHARTIARTL.NS",
+    "AIRTEL": "BHARTIARTL.NS",
+    "HINDUNILVR": "HINDUNILVR.NS",
+    "HUL": "HINDUNILVR.NS"
+  }
+
+  // Auto-map Indian stocks if not already suffixed
+  if (indianStockMap[symbol] && !symbol.includes('.')) {
+    symbol = indianStockMap[symbol]
+    console.log(`[Stocks API] Mapped ${searchParams.get("symbol")} to ${symbol}`)
+  }
+
+  console.log(`[Stocks API] Action: ${action}, Symbol: ${symbol}, Currency: ${currency}`)
 
   try {
-    // Fetch current stock data
-    const stockData = await fetchStockData(symbol)
-    
-    if (!stockData) {
+    // Get exchange rates
+    const rates = await getExchangeRates()
+    const exchangeRate = rates[currency] || 1
+
+    // Handle different actions
+    if (action === "search") {
+      // Global stock search using Alpha Vantage
+      const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || ""
+
+      if (!ALPHA_VANTAGE_KEY) {
+        console.warn('[Stocks API] No Alpha Vantage API key found')
+        return NextResponse.json({ results: [] })
+      }
+
+      try {
+        const searchUrl = `https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=${encodeURIComponent(searchQuery)}&apikey=${ALPHA_VANTAGE_KEY}`
+        const response = await fetch(searchUrl)
+        const data = await response.json()
+
+        const results = (data.bestMatches || []).slice(0, 10).map((match: any) => ({
+          symbol: match['1. symbol'],
+          name: match['2. name'],
+          region: match['4. region']
+        }))
+
+        return NextResponse.json({ results })
+      } catch (error) {
+        console.error('[Stocks API] Search failed:', error)
+        return NextResponse.json({ results: [] })
+      }
+    }
+
+    if (action === "ticker") {
+      // Fetch ticker tape stocks
+      const tickerData = await fetchMultipleStocks(TICKER_STOCKS, exchangeRate, currency)
+      return NextResponse.json({ ticker: tickerData, currency, exchangeRate })
+    }
+
+    if (action === "gainers" || action === "losers" || action === "active") {
+      // Fetch market movers using cached data
+      try {
+        const data = await getMarketMovers()
+
+        let stocks = []
+        if (action === "gainers" && data.top_gainers) {
+          stocks = data.top_gainers.slice(0, 5).map((stock: any) => ({
+            symbol: stock.ticker,
+            name: stock.ticker,
+            price: parseFloat(stock.price) * exchangeRate,
+            change: parseFloat(stock.change_percentage.replace('%', '')),
+            volume: parseInt(stock.volume)
+          }))
+        } else if (action === "losers" && data.top_losers) {
+          stocks = data.top_losers.slice(0, 5).map((stock: any) => ({
+            symbol: stock.ticker,
+            name: stock.ticker,
+            price: parseFloat(stock.price) * exchangeRate,
+            change: parseFloat(stock.change_percentage.replace('%', '')),
+            volume: parseInt(stock.volume)
+          }))
+        } else if (action === "active" && data.most_actively_traded) {
+          stocks = data.most_actively_traded.slice(0, 5).map((stock: any) => ({
+            symbol: stock.ticker,
+            name: stock.ticker,
+            price: parseFloat(stock.price) * exchangeRate,
+            change: parseFloat(stock.change_percentage.replace('%', '')),
+            volume: parseInt(stock.volume)
+          }))
+        }
+
+        return NextResponse.json({ [action]: stocks, currency, exchangeRate })
+      } catch (error) {
+        console.error(`[Stocks API] ${action} fetch failed:`, error)
+        return NextResponse.json({ [action]: [], currency, exchangeRate })
+      }
+    }
+
+    // Default: Fetch single stock quote
+    const quoteUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`
+    const quoteResponse = await fetch(quoteUrl, { cache: "no-store" })
+    const quoteData = await quoteResponse.json()
+
+    if (!quoteData?.chart?.result?.[0]) {
       return NextResponse.json({
-        prices: [],
-        list: [],
-        summary: `Unable to fetch data for ${symbol}. Please check if the symbol is correct.`,
-        error: "Stock not found"
+        error: "Stock not found",
+        summary: `Unable to fetch data for "${symbol}". Please check if the symbol is correct.`
       }, { status: 404 })
     }
 
-    // Fetch historical data for chart
-    const historicalData = await fetchHistoricalData(symbol)
+    const result = quoteData.chart.result[0]
+    const meta = result.meta
+    const quote = result.indicators.quote[0]
 
-    // Fetch popular stocks for the table
-    const popularStocksData = []
-    for (const stock of POPULAR_STOCKS.slice(0, 8)) { // Limit to 8 to avoid API limits
-      const data = await fetchStockData(stock)
-      if (data) {
-        popularStocksData.push({
-          symbol: data.symbol,
-          name: getCompanyName(data.symbol),
-          price: data.price,
-          change: data.changePercent
-        })
+    // Fetch historical data for chart with volume
+    let chartData: any[] = []
+    let volumeData: any[] = []
+    try {
+      const historicalUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=${range}`
+      const historicalResponse = await fetch(historicalUrl, { cache: "no-store" })
+      const historicalDataRaw = await historicalResponse.json()
+
+      if (historicalDataRaw?.chart?.result?.[0]) {
+        const histResult = historicalDataRaw.chart.result[0]
+        const timestamps = histResult.timestamp
+        const closes = histResult.indicators.quote[0].close
+        const volumes = histResult.indicators.quote[0].volume
+
+        if (timestamps && closes) {
+          chartData = timestamps.map((timestamp: number, index: number) => ({
+            d: new Date(timestamp * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            v: closes[index] ? closes[index] * exchangeRate : null,
+            vol: volumes[index] || 0
+          })).filter((item: any) => item.v !== null)
+
+          volumeData = chartData.map((item: any) => ({
+            d: item.d,
+            vol: item.vol
+          }))
+        }
       }
-      // Add delay to avoid hitting API limits
-      await new Promise(resolve => setTimeout(resolve, 200))
+    } catch (e) {
+      console.error("[Stocks API] Historical data fetch failed:", e)
     }
 
+    // Extract stock data
+    const currentPrice = (meta.regularMarketPrice || 0) * exchangeRate
+    const previousClose = (meta.chartPreviousClose || meta.previousClose || 0) * exchangeRate
+    const change = currentPrice - previousClose
+    const changePercent = previousClose > 0 ? (change / previousClose) * 100 : 0
+    const volume = meta.regularMarketVolume || 0
+    const high = (quote.high?.[quote.high.length - 1] || meta.regularMarketDayHigh || 0) * exchangeRate
+    const low = (quote.low?.[quote.low.length - 1] || meta.regularMarketDayLow || 0) * exchangeRate
+    const open = (quote.open?.[0] || meta.regularMarketOpen || 0) * exchangeRate
+    const marketCap = meta.marketCap || 0
+
     // Generate AI summary
-    let summary = `${symbol} is currently trading at $${stockData.price.toFixed(2)}.`
-    
+    let summary = `${symbol} is currently trading at ${CURRENCY_SYMBOLS[currency]}${currentPrice.toFixed(2)}.`
+
     try {
       const summaryPrompt = `Provide a brief 2-3 sentence analysis of ${symbol} stock based on this data:
-      Current Price: $${stockData.price}
-      Change: ${stockData.changePercent.toFixed(2)}%
-      Volume: ${stockData.volume.toLocaleString()}
-      High: $${stockData.high}
-      Low: $${stockData.low}
-      
+      Current Price: ${CURRENCY_SYMBOLS[currency]}${currentPrice.toFixed(2)}
+      Change: ${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%
+      Volume: ${volume.toLocaleString()}
+
       Focus on the price movement and what it might indicate for investors.`
 
       summary = await gemini(summaryPrompt, true)
     } catch (error) {
-      console.error("Failed to generate AI summary:", error)
-      const trend = stockData.changePercent >= 0 ? "gaining" : "declining"
-      const trendEmoji = stockData.changePercent >= 0 ? "📈" : "📉"
-      summary = `${trendEmoji} ${symbol} is currently ${trend} ${Math.abs(stockData.changePercent).toFixed(2)}% today, trading at $${stockData.price.toFixed(2)}. The stock has a daily range of $${stockData.low.toFixed(2)} - $${stockData.high.toFixed(2)} with volume of ${stockData.volume.toLocaleString()} shares.`
+      const trend = changePercent >= 0 ? "gaining" : "declining"
+      const trendEmoji = changePercent >= 0 ? "📈" : "📉"
+      summary = `${trendEmoji} ${symbol} is currently ${trend} ${Math.abs(changePercent).toFixed(2)}% today, trading at ${CURRENCY_SYMBOLS[currency]}${currentPrice.toFixed(2)}.`
     }
 
     return NextResponse.json({
-      prices: historicalData,
-      list: popularStocksData,
+      prices: chartData,
+      volumeData: volumeData,
       summary,
       currentStock: {
-        symbol: stockData.symbol,
-        price: stockData.price,
-        change: stockData.changePercent,
-        volume: stockData.volume,
-        high: stockData.high,
-        low: stockData.low,
-        open: stockData.open
-      }
+        symbol: symbol,
+        name: GLOBAL_STOCKS[symbol] || symbol,
+        price: currentPrice,
+        change: changePercent,
+        volume: volume,
+        high: high,
+        low: low,
+        open: open,
+        marketCap: marketCap
+      },
+      currency,
+      exchangeRate,
+      currencySymbol: CURRENCY_SYMBOLS[currency]
     })
 
   } catch (error: any) {
     console.error('[Stocks API] Error:', error)
     return NextResponse.json({
-      prices: [],
-      list: [],
-      summary: `Unable to load stock data at the moment. This might be due to API limits or network issues. Please try again later.`,
-      error: error.message
+      error: error.message,
+      summary: `Unable to load stock data. Please try again later.`
     }, { status: 500 })
   }
 }
 
-function getCompanyName(symbol: string): string {
-  const companies: { [key: string]: string } = {
-    "AAPL": "Apple Inc.",
-    "MSFT": "Microsoft Corporation",
-    "GOOGL": "Alphabet Inc.",
-    "AMZN": "Amazon.com Inc.",
-    "TSLA": "Tesla Inc.",
-    "NVDA": "NVIDIA Corporation",
-    "META": "Meta Platforms Inc.",
-    "NFLX": "Netflix Inc.",
-    "AMD": "Advanced Micro Devices",
-    "INTC": "Intel Corporation",
-    "ORCL": "Oracle Corporation",
-    "CRM": "Salesforce Inc.",
-    "ADBE": "Adobe Inc.",
-    "PYPL": "PayPal Holdings",
-    "UBER": "Uber Technologies",
-    "SPOT": "Spotify Technology"
+async function fetchMultipleStocks(symbols: string[], exchangeRate: number, currency: string) {
+  const stocks = []
+
+  try {
+    // Batch fetch using Yahoo Finance
+    const symbolsStr = symbols.join(',')
+    const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbolsStr}`
+    const response = await fetch(url, { cache: "no-store" })
+    const data = await response.json()
+
+    if (data?.quoteResponse?.result) {
+      for (const stock of data.quoteResponse.result) {
+        const price = (stock.regularMarketPrice || 0) * exchangeRate
+        const prevClose = (stock.regularMarketPreviousClose || 1) * exchangeRate
+        const changePercent = ((price - prevClose) / prevClose) * 100
+
+        stocks.push({
+          symbol: stock.symbol,
+          name: stock.longName || stock.shortName || GLOBAL_STOCKS[stock.symbol] || stock.symbol,
+          price: price,
+          change: changePercent,
+          volume: stock.regularMarketVolume || 0
+        })
+      }
+    }
+  } catch (error) {
+    console.error('[Stocks API] Batch fetch failed:', error)
   }
-  return companies[symbol] || symbol
+
+  return stocks
 }

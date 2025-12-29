@@ -24,7 +24,8 @@ const nextConfig = {
       'lh3.googleusercontent.com',
       'youtube.com',
       'www.youtube.com',
-      'ytimg.com'
+      'ytimg.com',
+      'flagsapi.com'
     ],
     formats: ['image/webp', 'image/avif'],
     remotePatterns: [

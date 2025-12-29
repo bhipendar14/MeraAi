@@ -1,12 +1,20 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { X, CreditCard, User, Calendar, MapPin } from "lucide-react"
+import { X, CreditCard, User, Calendar, MapPin, Mail, Phone, Cake } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
+import { useToast } from "@/components/ui/toast-provider"
+
+interface PassengerInfo {
+  name: string
+  email: string
+  phone: string
+  age: number
+}
 
 interface BookingModalProps {
   isOpen: boolean
@@ -17,27 +25,68 @@ interface BookingModalProps {
     to: string
     date: string
     price: number
+    passengerCount?: number // Optional passenger count
     details: any
   }
 }
 
 export function BookingModal({ isOpen, onClose, bookingData }: BookingModalProps) {
   const { user } = useAuth()
-  const [passengers, setPassengers] = useState(1)
+  const { showError, showSuccess } = useToast()
+  const [passengers, setPassengers] = useState(bookingData?.passengerCount || 1)
   const [isBooking, setIsBooking] = useState(false)
   const [bookingSuccess, setBookingSuccess] = useState(false)
   const [bookingId, setBookingId] = useState('')
 
+  // Array of passenger details
+  const [passengersList, setPassengersList] = useState<PassengerInfo[]>([])
+
+  // Initialize passenger list when modal opens or passenger count changes
+  useEffect(() => {
+    if (isOpen && bookingData) {
+      const count = bookingData.passengerCount || 1
+      setPassengers(count)
+
+      // Create array with first passenger pre-filled, others empty
+      const initialPassengers: PassengerInfo[] = Array.from({ length: count }, (_, index) => ({
+        name: index === 0 ? (user?.name || '') : '',
+        email: index === 0 ? (user?.email || '') : '',
+        phone: index === 0 ? (user?.phone || '') : '',
+        age: index === 0 ? 25 : 18
+      }))
+
+      setPassengersList(initialPassengers)
+    }
+  }, [isOpen, bookingData?.passengerCount, user])
+
   if (!isOpen) return null
+
+  const updatePassenger = (index: number, field: keyof PassengerInfo, value: string | number) => {
+    const updated = [...passengersList]
+    updated[index] = { ...updated[index], [field]: value }
+    setPassengersList(updated)
+  }
 
   const handleBooking = async () => {
     if (!user) return
+
+    // Validate all passengers have names and ages
+    for (let i = 0; i < passengersList.length; i++) {
+      if (!passengersList[i].name.trim()) {
+        showError(`Please enter name for Passenger ${i + 1}`, 'Validation Error')
+        return
+      }
+      if (!passengersList[i].age || passengersList[i].age < 1) {
+        showError(`Please enter valid age for Passenger ${i + 1}`, 'Validation Error')
+        return
+      }
+    }
 
     setIsBooking(true)
     try {
       const authToken = localStorage.getItem('auth_token')
       if (!authToken) {
-        alert('Please log in again to complete your booking')
+        showError('Please log in again to complete your booking', 'Authentication Required')
         return
       }
 
@@ -54,13 +103,14 @@ export function BookingModal({ isOpen, onClose, bookingData }: BookingModalProps
           departureDate: bookingData.date,
           passengers,
           totalPrice: bookingData.price * passengers,
-          bookingDetails: bookingData.details
+          bookingDetails: bookingData.details,
+          passengersList: passengersList, // Send array of all passengers
         })
       })
 
       const data = await response.json()
       console.log('Booking response:', { status: response.status, data })
-      
+
       if (response.ok) {
         setBookingId(data.bookingId)
         setBookingSuccess(true)
@@ -68,11 +118,11 @@ export function BookingModal({ isOpen, onClose, bookingData }: BookingModalProps
         window.dispatchEvent(new CustomEvent('bookingCreated'))
       } else {
         console.error('Booking failed:', data)
-        alert('Booking failed: ' + data.error)
+        showError(data.error || 'Internal server error', 'Booking Failed')
       }
     } catch (error) {
       console.error('Booking error:', error)
-      alert('Booking failed. Please try again.')
+      showError('Please try again later', 'Booking Failed')
     } finally {
       setIsBooking(false)
     }
@@ -98,7 +148,14 @@ export function BookingModal({ isOpen, onClose, bookingData }: BookingModalProps
                 Save this ID for future reference
               </p>
             </div>
-            <Button onClick={onClose} className="w-full">
+            <Button
+              onClick={() => {
+                setBookingSuccess(false)
+                setBookingId('')
+                onClose()
+              }}
+              className="w-full"
+            >
               Close
             </Button>
           </CardContent>
@@ -123,39 +180,137 @@ export function BookingModal({ isOpen, onClose, bookingData }: BookingModalProps
           {/* Booking Summary */}
           <div className="bg-muted/30 p-4 rounded-lg space-y-3">
             <h3 className="font-semibold">Booking Summary</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <span className="truncate">{bookingData.from} → {bookingData.to}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <span>{bookingData.date}</span>
-              </div>
+            <div className="grid grid-cols-1 gap-3 text-sm">
+              {bookingData.type === 'hotel' ? (
+                <>
+                  <div className="flex items-start gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate">{bookingData.details?.hotelName}</div>
+                      <div className="text-xs text-muted-foreground truncate">{bookingData.from}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span>{bookingData.details?.checkIn} → {bookingData.details?.checkOut}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {bookingData.details?.nights} night{bookingData.details?.nights > 1 ? 's' : ''} • {bookingData.details?.roomType}
+                  </div>
+                </>
+              ) : bookingData.type === 'flight' ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="truncate">{bookingData.from} → {bookingData.to}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span>{bookingData.date}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {bookingData.details?.airline} • {bookingData.details?.flightNumber}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {bookingData.details?.departureTime} - {bookingData.details?.arrivalTime} ({bookingData.details?.duration})
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="truncate">{bookingData.from} → {bookingData.to}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span>{bookingData.date}</span>
+                  </div>
+                  {bookingData.details?.operator && (
+                    <div className="text-xs text-muted-foreground">
+                      {bookingData.details.operator} • {bookingData.details.departureTime} - {bookingData.details.arrivalTime}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
             <div className="flex justify-between items-center pt-2 border-t">
-              <span className="font-semibold">Type: {bookingData.type.toUpperCase()}</span>
-              <span className="font-semibold">₹{bookingData.price}</span>
+              <span className="font-semibold capitalize">{bookingData.type}</span>
+              <span className="font-semibold">₹{bookingData.price.toLocaleString()}</span>
             </div>
           </div>
 
           {/* Passenger Details */}
-          <div className="space-y-4">
-            <h3 className="font-semibold flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Passenger Details
-            </h3>
-            <div className="space-y-2">
-              <Label htmlFor="passengers">Number of Passengers</Label>
-              <Input
-                id="passengers"
-                type="number"
-                min="1"
-                max="6"
-                value={passengers}
-                onChange={(e) => setPassengers(parseInt(e.target.value) || 1)}
-              />
-            </div>
+          <div className="space-y-6">
+            {passengersList.map((passenger, index) => (
+              <div key={index} className="space-y-4">
+                <h3 className="font-semibold flex items-center gap-2 text-lg">
+                  <User className="h-5 w-5" />
+                  Passenger {index + 1} Details
+                  {index === 0 && <span className="text-xs text-muted-foreground font-normal">(Primary Contact)</span>}
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor={`passenger-name-${index}`}>Full Name *</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id={`passenger-name-${index}`}
+                        value={passenger.name}
+                        onChange={(e) => updatePassenger(index, 'name', e.target.value)}
+                        placeholder="Enter passenger name"
+                        className="pl-10"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`passenger-email-${index}`}>Email {index === 0 && '*'}</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id={`passenger-email-${index}`}
+                        type="email"
+                        value={passenger.email}
+                        onChange={(e) => updatePassenger(index, 'email', e.target.value)}
+                        placeholder="Enter email"
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`passenger-phone-${index}`}>Phone {index === 0 && '*'}</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id={`passenger-phone-${index}`}
+                        value={passenger.phone}
+                        onChange={(e) => updatePassenger(index, 'phone', e.target.value)}
+                        placeholder="Enter phone number"
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`passenger-age-${index}`}>Age *</Label>
+                    <div className="relative">
+                      <Cake className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id={`passenger-age-${index}`}
+                        type="number"
+                        min="1"
+                        max="120"
+                        value={passenger.age}
+                        onChange={(e) => updatePassenger(index, 'age', parseInt(e.target.value) || 18)}
+                        placeholder="Enter age"
+                        className="pl-10"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+                {index < passengersList.length - 1 && <div className="border-t my-4" />}
+              </div>
+            ))}
           </div>
 
           {/* Payment Summary */}
@@ -184,8 +339,8 @@ export function BookingModal({ isOpen, onClose, bookingData }: BookingModalProps
             <Button variant="outline" onClick={onClose} className="flex-1 order-2 sm:order-1">
               Cancel
             </Button>
-            <Button 
-              onClick={handleBooking} 
+            <Button
+              onClick={handleBooking}
               disabled={isBooking || !user}
               className="flex-1 order-1 sm:order-2"
             >
@@ -200,13 +355,15 @@ export function BookingModal({ isOpen, onClose, bookingData }: BookingModalProps
             </Button>
           </div>
 
-          {!user && (
-            <p className="text-sm text-muted-foreground text-center">
-              Please log in to complete your booking
-            </p>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+          {
+            !user && (
+              <p className="text-sm text-muted-foreground text-center">
+                Please log in to complete your booking
+              </p>
+            )
+          }
+        </CardContent >
+      </Card >
+    </div >
   )
 }

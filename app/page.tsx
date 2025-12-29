@@ -4,6 +4,9 @@ import { TrendingCards } from "@/components/trending-cards"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { ResearchChat } from "@/components/research-chat"
+import { WeatherDisplay } from "@/components/weather-display"
+import { BreakingNewsTicker } from "@/components/breaking-news-ticker"
+import { TravelDestinationsTicker } from "@/components/travel-destinations-ticker"
 
 export default function HomePage() {
   return (
@@ -30,21 +33,29 @@ export default function HomePage() {
               </Link>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-            <span className="px-3 py-1 rounded-full bg-accent/20 border border-accent/30">✨ 8 Modules</span>
-            <span className="px-3 py-1 rounded-full bg-green-500/20 border border-green-500/30">📈 Live Data</span>
-            <span className="px-3 py-1 rounded-full bg-blue-500/20 border border-blue-500/30">⚡ Fast UI</span>
-            <span className="px-3 py-1 rounded-full bg-purple-500/20 border border-purple-500/30">🎨 Themes</span>
+          <div className="flex items-center">
+            <WeatherDisplay />
           </div>
         </div>
       </section>
+
+      {/* Breaking News Ticker */}
+      <BreakingNewsTicker />
 
       {/* Chat on Home */}
       <section className="space-y-3">
         <h3 className="text-lg font-semibold">Chat with Mera AI</h3>
         <div className="rounded-xl border border-border/60 bg-card/60 backdrop-blur p-4">
-          <ResearchChat />
+          <div className="max-h-[400px] md:max-h-[450px]">
+            <ResearchChat compact />
+          </div>
         </div>
+      </section>
+
+      {/* Travel Destinations Ticker */}
+      <section className="space-y-3">
+        <h3 className="text-lg font-semibold">Popular Travel Destinations</h3>
+        <TravelDestinationsTicker />
       </section>
 
       {/* Trending Now dashboard */}

@@ -12,8 +12,11 @@ export async function GET(req: NextRequest) {
 
     const user = verifyToken(token)
     if (!user) {
+      console.log('[Chat History GET] Invalid token')
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
+
+    console.log('[Chat History GET] Fetching history for user:', user.id)
 
     const { db } = await connectToDatabase()
     const chatHistory = db.collection('chat_history')
@@ -33,8 +36,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ history: formattedHistory })
 
   } catch (error: any) {
-    console.error('Chat history fetch error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('[Chat History GET] Error:', error)
+    return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 })
   }
 }
 

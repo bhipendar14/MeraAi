@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { gemini } from "@/lib/ai-gemini"
 
-const GEMINI_API_KEY = "AIzaSyD0VmHLF6QGCW08-I6PzhW645Nql0iN5lA"
+
 const PISTON_API = "https://emkc.org/api/v2/piston/execute"
 
 const LANGUAGE_MAP: Record<string, string> = {
@@ -56,9 +56,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "fix") {
-      const fixPrompt = `You are an expert ${language} developer. Fix the bugs in this code and return ONLY the corrected code without any explanations or markdown:\n\n${code}`
+      const fixPrompt = `You are an expert ${language} developer. Fix the bugs in this code and return ONLY the corrected code without any explanations, markdown formatting, or code blocks. Just return the raw code:\\n\\n${code}`
       try {
-        const fixedCode = await gemini(fixPrompt, true)
+        let fixedCode = await gemini(fixPrompt, true)
+
+        // Clean up any markdown code blocks if present
+        fixedCode = fixedCode.replace(/```[\w]*\n?/g, '').trim()
+
         return NextResponse.json({
           output: fixedCode || "Unable to fix code. Please try again.",
           fixed: !!fixedCode,

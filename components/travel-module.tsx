@@ -1,566 +1,556 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { MapPin, Calendar, Search, Train, Bus, Clock, Sparkles, CreditCard, Star, Navigation } from "lucide-react"
-import { gemini } from "@/lib/ai-gemini"
+import { Plane, Building2, Train, MapPin, CreditCard } from "lucide-react"
+import { FlightSearch } from "@/components/travel/flight-search"
+import { HotelSearch } from "@/components/travel/hotel-search"
+import { DestinationExplorer } from "@/components/travel/destination-explorer"
 import { BookingModal } from "@/components/travel/booking-modal"
 import { MyBookings } from "@/components/travel/my-bookings"
-import { DestinationRecommendations } from "@/components/travel/destination-recommendations"
-import { DebugInfo } from "@/components/travel/debug-info"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { DatePicker } from "@/components/ui/date-picker"
+import { Calendar, Search, Bus, Clock, Users } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
+import { validateAdvanceBooking } from "@/lib/travel-validation"
 
 type Result = {
-  id: number;
-  type: "Train" | "Bus";
-  seats: number;
-  depart: string;
-  arrive: string;
-  price: number;
-  operator?: string;
-  duration?: string;
+  id: number
+  type: "Train" | "Bus"
+  seats: number
+  depart: string
+  arrive: string
+  price: number
+  operator?: string
+  duration?: string
 }
-
-type Place = {
-  name: string
-  description: string
-  category: string
-  rating: number
-  lat: number
-  lng: number
-  image: string
-  bestTimeToVisit: string
-  estimatedDuration: string
-}
-
-type TravelRecommendation = {
-  destination: string
-  places: Place[]
-  aiSummary: string
-  localTips: string[]
-}
-
-
 
 export function TravelModule() {
   const { user } = useAuth()
-  const [from, setFrom] = useState("")
-  const [to, setTo] = useState("")
-  const [date, setDate] = useState("")
-  const [results, setResults] = useState<Result[] | null>(null)
-  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null)
-  const [isSearching, setIsSearching] = useState(false)
-  const [recommendation, setRecommendation] = useState<TravelRecommendation | null>(null)
-  const [isLoadingRecommendation, setIsLoadingRecommendation] = useState(false)
-  const [isCalendarUnlocked, setIsCalendarUnlocked] = useState(false)
   const [bookingModal, setBookingModal] = useState<{
     isOpen: boolean
     data: any
   }>({ isOpen: false, data: null })
-  const [notification, setNotification] = useState<string | null>(null)
 
+  // Train/Bus search state
+  const [from, setFrom] = useState("")
+  const [to, setTo] = useState("")
+  const [date, setDate] = useState<Date>()
+  const [passengerCount, setPassengerCount] = useState(1) // Track passenger count
   const [fromSuggestions, setFromSuggestions] = useState<string[]>([])
   const [toSuggestions, setToSuggestions] = useState<string[]>([])
+  const [results, setResults] = useState<Result[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [notification, setNotification] = useState<string | null>(null)
+  const [isCalendarUnlocked, setIsCalendarUnlocked] = useState(false)
+  const [popularDestinations, setPopularDestinations] = useState<any[]>([])
+  const [searchError, setSearchError] = useState("")
+  const [activeTab, setActiveTab] = useState("destinations")
+  const [selectedDestinationFromTape, setSelectedDestinationFromTape] = useState<any>(null)
+
+  // Calculate max date (2 months from now for trains/buses)
+  const today = new Date()
+  const maxDateTrains = new Date(today)
+  maxDateTrains.setMonth(maxDateTrains.getMonth() + 2)
+  const minDate = new Date(today)
 
   const cities = [
-    "Mumbai",
-    "Delhi",
-    "Bangalore",
-    "Rajkot",
-    "Ahmedabad",
-    "Pune",
-    "Hyderabad",
-    "Chennai",
-    "Kolkata",
-    "Jaipur",
+    "Mumbai", "Delhi", "Bangalore", "Rajkot", "Ahmedabad",
+    "Pune", "Hyderabad", "Chennai", "Kolkata", "Jaipur",
   ]
+
+  // Load popular destinations for scrolling tape
+  useEffect(() => {
+    const fetchDestinations = async () => {
+      try {
+        const response = await fetch('/api/destinations')
+        const data = await response.json()
+        setPopularDestinations(data.destinations || [])
+      } catch (error) {
+        console.error('Error fetching destinations:', error)
+      }
+    }
+    fetchDestinations()
+  }, [])
+
+  const unlockCalendar = () => {
+    setIsCalendarUnlocked(true)
+    setSearchError("")
+  }
 
   const handleFromChange = (value: string) => {
     setFrom(value)
     if (value.length > 0) {
-      setFromSuggestions(cities.filter((c) => c.toLowerCase().includes(value.toLowerCase())))
+      const matches = cities.filter(city =>
+        city.toLowerCase().includes(value.toLowerCase())
+      )
+      setFromSuggestions(matches)
     } else {
       setFromSuggestions([])
+    }
+    // Unlock calendar if both cities are selected
+    if (value && to) {
+      unlockCalendar()
     }
   }
 
   const handleToChange = (value: string) => {
     setTo(value)
     if (value.length > 0) {
-      setToSuggestions(cities.filter((c) => c.toLowerCase().includes(value.toLowerCase())))
-      fetchRecommendations(value)
+      const matches = cities.filter(city =>
+        city.toLowerCase().includes(value.toLowerCase())
+      )
+      setToSuggestions(matches)
     } else {
       setToSuggestions([])
-      setRecommendation(null)
     }
-  }
-
-  const fetchRecommendations = async (destination: string) => {
-    setIsLoadingRecommendation(true)
-    try {
-      const response = await fetch(`/api/travel/recommendations?destination=${encodeURIComponent(destination.toLowerCase())}`)
-      if (response.ok) {
-        const data = await response.json()
-        setRecommendation(data.recommendation)
-      }
-    } catch (error) {
-      console.error('Error fetching recommendations:', error)
-    } finally {
-      setIsLoadingRecommendation(false)
+    // Unlock calendar if both cities are selected
+    if (from && value) {
+      unlockCalendar()
     }
-  }
-
-  const unlockCalendar = () => {
-    setIsCalendarUnlocked(true)
   }
 
   const onSearch = async () => {
-    if (!from || !to || !date) return
+    if (!from || !to || !date) {
+      setSearchError("Please fill in all fields")
+      return
+    }
 
+    const dateStr = date.toISOString().split('T')[0]
+
+    // Validate advance booking (2 months for trains/buses)
+    const advanceValidation = validateAdvanceBooking(dateStr, 'train')
+    if (!advanceValidation.isValid) {
+      setSearchError(advanceValidation.error || "Booking too far in advance")
+      return
+    }
+
+    setSearchError("")
     setIsSearching(true)
-    // Simulate API call with more realistic data
     await new Promise((resolve) => setTimeout(resolve, 1200))
 
     const basePrice = Math.floor(Math.random() * 1000) + 500
     const selectedDate = new Date(date)
     const today = new Date()
     const isToday = selectedDate.toDateString() === today.toDateString()
-    const currentTime = today.getHours() * 60 + today.getMinutes() // Current time in minutes
+    const currentTime = today.getHours() * 60 + today.getMinutes()
 
-    // Generate all possible results
     const allResults: Result[] = [
-      {
-        id: 1,
-        type: "Train" as const,
-        seats: 12,
-        depart: "08:40",
-        arrive: "12:10",
-        price: basePrice + 200,
-        operator: "Indian Railways",
-        duration: "3h 30m"
-      },
-      {
-        id: 2,
-        type: "Bus" as const,
-        seats: 5,
-        depart: "10:00",
-        arrive: "14:30",
-        price: Math.floor(basePrice * 0.6),
-        operator: "RedBus",
-        duration: "4h 30m"
-      },
-      {
-        id: 3,
-        type: "Train" as const,
-        seats: 0,
-        depart: "11:20",
-        arrive: "14:50",
-        price: basePrice + 300,
-        operator: "Indian Railways",
-        duration: "3h 30m"
-      },
-      {
-        id: 4,
-        type: "Bus" as const,
-        seats: 18,
-        depart: "13:15",
-        arrive: "17:45",
-        price: Math.floor(basePrice * 0.55),
-        operator: "RedBus",
-        duration: "4h 30m"
-      },
-      {
-        id: 5,
-        type: "Train" as const,
-        seats: 8,
-        depart: "15:30",
-        arrive: "19:00",
-        price: basePrice + 250,
-        operator: "Indian Railways",
-        duration: "3h 30m"
-      },
-      {
-        id: 6,
-        type: "Train" as const,
-        seats: 15,
-        depart: "18:45",
-        arrive: "22:15",
-        price: basePrice + 180,
-        operator: "Indian Railways",
-        duration: "3h 30m"
-      },
-      {
-        id: 7,
-        type: "Bus" as const,
-        seats: 22,
-        depart: "20:30",
-        arrive: "01:00",
-        price: Math.floor(basePrice * 0.7),
-        operator: "RedBus",
-        duration: "4h 30m"
-      },
+      { id: 1, type: "Train" as const, seats: 12, depart: "08:40", arrive: "12:10", price: basePrice + 200, operator: "Indian Railways", duration: "3h 30m" },
+      { id: 2, type: "Bus" as const, seats: 5, depart: "10:00", arrive: "14:30", price: Math.floor(basePrice * 0.6), operator: "RedBus", duration: "4h 30m" },
+      { id: 3, type: "Train" as const, seats: 0, depart: "11:20", arrive: "14:50", price: basePrice + 300, operator: "Indian Railways", duration: "3h 30m" },
+      { id: 4, type: "Bus" as const, seats: 18, depart: "13:15", arrive: "17:45", price: Math.floor(basePrice * 0.55), operator: "RedBus", duration: "4h 30m" },
+      { id: 5, type: "Train" as const, seats: 8, depart: "15:30", arrive: "19:00", price: basePrice + 250, operator: "Indian Railways", duration: "3h 30m" },
+      { id: 6, type: "Train" as const, seats: 15, depart: "18:45", arrive: "22:15", price: basePrice + 180, operator: "Indian Railways", duration: "3h 30m" },
+      { id: 7, type: "Bus" as const, seats: 22, depart: "20:30", arrive: "01:00", price: Math.floor(basePrice * 0.7), operator: "RedBus", duration: "4h 30m" },
     ]
 
-    // Filter out past departure times if booking for today
     const filteredResults = isToday
       ? allResults.filter(result => {
         const [hours, minutes] = result.depart.split(':').map(Number)
         const departureTime = hours * 60 + minutes
-        return departureTime > currentTime + 30 // Add 30 minutes buffer
+        return departureTime > currentTime + 30
       })
       : allResults
-
-    // Show notification if results were filtered
-    if (isToday && filteredResults.length < allResults.length) {
-      const filteredCount = allResults.length - filteredResults.length
-      setNotification(`${filteredCount} departure${filteredCount > 1 ? 's' : ''} with past times were filtered out for today's booking.`)
-      setTimeout(() => setNotification(null), 5000)
-    }
 
     setResults(filteredResults)
     setIsSearching(false)
   }
 
   const handleBookNow = (result: Result) => {
+    if (!user) {
+      alert("Please sign in to book tickets")
+      return
+    }
+
     setBookingModal({
       isOpen: true,
       data: {
-        type: result.type.toLowerCase(),
+        type: result.type,
         from,
         to,
-        date,
+        date: date?.toLocaleDateString() || '',
         price: result.price,
+        passengerCount, // Pass passenger count
         details: {
           operator: result.operator,
+          departure: result.depart,
+          arrival: result.arrive,
           duration: result.duration,
-          departureTime: result.depart,
-          arrivalTime: result.arrive
-        }
-      }
+        },
+      },
     })
   }
 
+  const handleBookFlight = (flight: any) => {
+    if (!user) {
+      alert("Please sign in to book flights")
+      return
+    }
+
+    setBookingModal({
+      isOpen: true,
+      data: {
+        type: 'flight',
+        from: flight.from,
+        to: flight.to,
+        date: flight.departureTime.split(' ')[0],
+        price: flight.price,
+        details: {
+          airline: flight.airline,
+          flightNumber: flight.flightNumber,
+          departure: flight.departureTime,
+          arrival: flight.arrivalTime,
+          duration: flight.duration,
+          stops: flight.stops,
+        },
+      },
+    })
+  }
+
+  const handleBookHotel = (hotel: any) => {
+    if (!user) {
+      alert("Please sign in to book hotels")
+      return
+    }
+
+    setBookingModal({
+      isOpen: true,
+      data: {
+        type: 'hotel',
+        from: hotel.address,
+        to: hotel.name,
+        date: typeof hotel.checkIn === 'string' ? hotel.checkIn : hotel.checkIn?.toLocaleDateString() || '',
+        price: hotel.totalPrice,
+        details: {
+          hotelName: hotel.name,
+          checkIn: hotel.checkIn,
+          checkOut: hotel.checkOut,
+          nights: hotel.nights,
+          guests: hotel.guests,
+          roomType: hotel.roomType,
+          rating: hotel.rating,
+        },
+      },
+    })
+  }
+
+  const handleDestinationClick = (dest: any) => {
+    // Navigate to destinations tab and pass the selected destination
+    setActiveTab("destinations")
+    setSelectedDestinationFromTape(dest)
+  }
+
   return (
-    <>
-      <Tabs defaultValue="search" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="search">Search & Book</TabsTrigger>
-          <TabsTrigger value="bookings">My Bookings</TabsTrigger>
-        </TabsList>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-6 sm:py-8 max-w-7xl">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-3xl sm:text-4xl font-bold mb-2">Travel & Booking</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Search transportation, discover destinations, and book your next journey with AI-powered recommendations.
+          </p>
+        </div>
 
-        <TabsContent value="search" className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-1 xl:grid-cols-3">
-            {/* Search Section */}
-            <Card className="border-border/60 bg-card/60 backdrop-blur xl:col-span-2">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Search className="h-4 w-4" />
-                  Search Transportation
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-3 sm:grid-cols-1 md:grid-cols-3">
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
-                    <input
-                      value={from}
-                      onChange={(e) => handleFromChange(e.target.value)}
-                      placeholder="From"
-                      className="w-full rounded-md border border-border/60 bg-muted/30 pl-10 pr-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      aria-label="From"
-                    />
-                    {fromSuggestions.length > 0 && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg z-20 max-h-40 overflow-y-auto">
-                        {fromSuggestions.map((city) => (
-                          <button
-                            key={city}
-                            onClick={() => {
-                              setFrom(city)
-                              setFromSuggestions([])
-                            }}
-                            className="w-full text-left px-3 py-2 hover:bg-muted/50 text-sm"
-                          >
-                            {city}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
-                    <input
-                      value={to}
-                      onChange={(e) => handleToChange(e.target.value)}
-                      placeholder="To"
-                      className="w-full rounded-md border border-border/60 bg-muted/30 pl-10 pr-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      aria-label="To"
-                    />
-                    {toSuggestions.length > 0 && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg z-20 max-h-40 overflow-y-auto">
-                        {toSuggestions.map((city) => (
-                          <button
-                            key={city}
-                            onClick={() => {
-                              setTo(city)
-                              setToSuggestions([])
-                              fetchRecommendations(city)
-                            }}
-                            className="w-full text-left px-3 py-2 hover:bg-muted/50 text-sm"
-                          >
-                            {city}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
-                    {!isCalendarUnlocked ? (
-                      <button
-                        onClick={unlockCalendar}
-                        className="w-full rounded-md border border-border/60 bg-muted/30 pl-10 pr-3 py-2 text-left text-muted-foreground hover:bg-muted/50 transition-colors"
-                      >
-                        Click to select date
-                      </button>
-                    ) : (
-                      <input
-                        type="date"
-                        value={date}
-                        onChange={(e) => setDate(e.target.value)}
-                        min={new Date().toISOString().split('T')[0]} // Prevent past dates
-                        className="w-full rounded-md border border-border/60 bg-background pl-10 pr-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-ring animate-in fade-in duration-300 text-foreground"
-                        style={{ colorScheme: 'light dark' }} // Ensures calendar picker is visible in both themes
-                        aria-label="Date"
+        {/* Scrolling Tape - Now at the top, visible on all tabs */}
+        {popularDestinations.length > 0 && (
+          <div className="mb-6 overflow-hidden bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-900/20 rounded-lg py-4">
+            <div className="flex animate-scroll gap-6">
+              {/* Duplicate the array for seamless loop */}
+              {[...popularDestinations, ...popularDestinations].map((dest, idx) => (
+                <button
+                  key={`scroll-${idx}`}
+                  onClick={() => handleDestinationClick(dest)}
+                  className="flex-shrink-0 flex items-center gap-3 px-4 py-2 bg-white dark:bg-gray-900 rounded-full hover:shadow-lg transition-shadow cursor-pointer"
+                >
+                  <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                    {dest.image && (
+                      <img
+                        src={dest.image}
+                        alt={dest.name}
+                        className="w-full h-full object-cover"
                       />
                     )}
                   </div>
-                </div>
+                  <div className="text-left">
+                    <div className="font-semibold text-sm">{dest.name}</div>
+                    <div className="text-xs text-muted-foreground">{dest.country}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
-                <Button
-                  onClick={onSearch}
-                  disabled={!from || !to || !date || isSearching}
-                  className="w-full transition-all hover:shadow-[0_0_12px_hsl(var(--chart-2))]"
-                >
-                  {isSearching ? (
-                    <span className="flex items-center gap-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                      Searching...
-                    </span>
-                  ) : (
-                    "Search Routes"
-                  )}
-                </Button>
+        <style jsx>{`
+          @keyframes scroll {
+            0% {
+              transform: translateX(0);
+            }
+            100% {
+              transform: translateX(-50%);
+            }
+          }
+          .animate-scroll {
+            animation: scroll 60s linear infinite;
+          }
+          .animate-scroll:hover {
+            animation-play-state: paused;
+          }
+        `}</style>
 
-                {results && results.length === 0 && (
-                  <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 text-center">
-                    <div className="text-sm text-yellow-800 dark:text-yellow-200">
-                      ⚠️ No available routes found for the selected date and time.
-                      {new Date(date).toDateString() === new Date().toDateString() && (
-                        <div className="mt-1 text-xs">
-                          Try selecting a future date or check back later for more options.
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-5 gap-1 h-auto p-1">
+            <TabsTrigger value="destinations" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+              <MapPin className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Destinations</span>
+              <span className="sm:hidden">Places</span>
+            </TabsTrigger>
+            <TabsTrigger value="flights" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+              <Plane className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span>Flights</span>
+            </TabsTrigger>
+            <TabsTrigger value="hotels" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+              <Building2 className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span>Hotels</span>
+            </TabsTrigger>
+            <TabsTrigger value="trains" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+              <Train className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden lg:inline">Trains & Buses</span>
+              <span className="lg:hidden">Train/Bus</span>
+            </TabsTrigger>
+            <TabsTrigger value="bookings" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+              <CreditCard className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">My Bookings</span>
+              <span className="sm:hidden">Bookings</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="destinations" className="mt-4 sm:mt-6">
+            <DestinationExplorer
+              selectedDestination={selectedDestinationFromTape}
+              onNavigateToFlights={() => setActiveTab("flights")}
+              onNavigateToHotels={() => setActiveTab("hotels")}
+              onNavigateToTrains={() => setActiveTab("trains")}
+            />
+          </TabsContent>
+
+          <TabsContent value="flights" className="mt-4 sm:mt-6">
+            <FlightSearch onBookFlight={handleBookFlight} />
+          </TabsContent>
+
+          <TabsContent value="hotels" className="mt-4 sm:mt-6">
+            <HotelSearch onBookHotel={handleBookHotel} />
+          </TabsContent>
+
+          <TabsContent value="trains" className="mt-4 sm:mt-6">
+            <Card className="border-border/60 bg-card/60 backdrop-blur">
+              <CardContent className="p-4 sm:p-6">
+                <div className="grid gap-4">
+                  {/* From/To Row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* From */}
+                    <div className="space-y-2 relative">
+                      <Label htmlFor="train-from" className="text-sm font-medium">From</Label>
+                      <div className="relative">
+                        <Train className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="train-from"
+                          value={from}
+                          onChange={(e) => handleFromChange(e.target.value)}
+                          placeholder="Enter city"
+                          className="pl-10"
+                        />
+                      </div>
+                      {fromSuggestions.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg z-20 max-h-60 overflow-y-auto">
+                          {fromSuggestions.map((city) => (
+                            <button
+                              key={city}
+                              onClick={() => {
+                                setFrom(city)
+                                setFromSuggestions([])
+                                unlockCalendar()
+                              }}
+                              className="w-full text-left px-3 py-2 hover:bg-muted/50 text-sm"
+                            >
+                              {city}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* To */}
+                    <div className="space-y-2 relative">
+                      <Label htmlFor="train-to" className="text-sm font-medium">To</Label>
+                      <div className="relative">
+                        <Train className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground rotate-90" />
+                        <Input
+                          id="train-to"
+                          value={to}
+                          onChange={(e) => handleToChange(e.target.value)}
+                          placeholder="Enter city"
+                          className="pl-10"
+                        />
+                      </div>
+                      {toSuggestions.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg z-20 max-h-60 overflow-y-auto">
+                          {toSuggestions.map((city) => (
+                            <button
+                              key={city}
+                              onClick={() => {
+                                setTo(city)
+                                setToSuggestions([])
+                                unlockCalendar()
+                              }}
+                              className="w-full text-left px-3 py-2 hover:bg-muted/50 text-sm"
+                            >
+                              {city}
+                            </button>
+                          ))}
                         </div>
                       )}
                     </div>
                   </div>
-                )}
 
-                {notification && (
-                  <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 animate-in slide-in-from-top duration-300">
-                    <div className="text-sm text-blue-800 dark:text-blue-200">
-                      ℹ️ {notification}
+                  {/* Date/Passengers Row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="train-date" className="text-sm font-medium">Travel Date</Label>
+                      <DatePicker
+                        id="train-date"
+                        value={date}
+                        onChange={(selectedDate) => setDate(selectedDate)}
+                        minDate={minDate}
+                        maxDate={maxDateTrains}
+                        disabled={!isCalendarUnlocked}
+                        placeholder="Select travel date"
+                      />
+                      <p className="text-xs text-muted-foreground">Book up to 2 months in advance</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="train-passengers" className="text-sm font-medium">Passengers</Label>
+                      <div className="relative">
+                        <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="train-passengers"
+                          type="number"
+                          min="1"
+                          max="9"
+                          value={passengerCount}
+                          onChange={(e) => setPassengerCount(Math.max(1, Math.min(9, parseInt(e.target.value) || 1)))}
+                          className="pl-10"
+                        />
+                      </div>
                     </div>
                   </div>
-                )}
 
-                {results && (
-                  <div className="space-y-2 pt-2 animate-in slide-in-from-bottom duration-500">
-                    <div className="text-sm font-medium text-muted-foreground">
-                      Found {results.length} routes from {from} to {to}
-                      {new Date(date).toDateString() === new Date().toDateString() && (
-                        <span className="text-xs text-blue-600 dark:text-blue-400 ml-2">
-                          (Past departure times filtered)
-                        </span>
-                      )}
+                  {/* Search Button */}
+                  <Button
+                    onClick={onSearch}
+                    disabled={isSearching || !from || !to || !date}
+                    className="w-full sm:w-auto"
+                    size="lg"
+                  >
+                    {isSearching ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                        Searching...
+                      </>
+                    ) : (
+                      <>
+                        <Search className="h-4 w-4 mr-2" />
+                        Search Routes
+                      </>
+                    )}
+                  </Button>
+
+                  {searchError && (
+                    <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-800 rounded-lg p-3 text-sm text-red-800 dark:text-red-200">
+                      {searchError}
                     </div>
-                    <div className="grid gap-2">
-                      {results.map((r, idx) => (
-                        <div
-                          key={r.id}
-                          className="rounded-lg border border-border/60 bg-card/60 p-4 hover:bg-muted/30 transition-all hover:scale-[1.02] animate-in slide-in-from-left duration-300"
-                          style={{ animationDelay: `${idx * 50}ms` }}
-                        >
-                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                            <div className="flex items-center gap-4 flex-1 min-w-0">
-                              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted flex-shrink-0">
-                                {r.type === "Train" ? (
-                                  <Train className="h-5 w-5 text-chart-2" />
-                                ) : (
-                                  <Bus className="h-5 w-5 text-chart-3" />
-                                )}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <div className="text-sm font-medium truncate">{r.type} - {r.operator}</div>
-                                <div className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Clock className="h-3 w-3 flex-shrink-0" />
-                                  <span className="truncate">{r.depart} → {r.arrive} ({r.duration})</span>
-                                </div>
-                              </div>
+                  )}
+                </div>
+              </CardContent>
+
+              {results && results.length > 0 && (
+                <div className="space-y-3 mt-4">
+                  {results.map((result) => (
+                    <Card key={result.id} className="border-border/60 bg-card/60 backdrop-blur">
+                      <CardContent className="p-4">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                          <div className="flex items-start gap-3 flex-1">
+                            <div className={`p-2 rounded-lg ${result.type === 'Train' ? 'bg-blue-100 dark:bg-blue-900/20' : 'bg-green-100 dark:bg-green-900/20'}`}>
+                              {result.type === 'Train' ? (
+                                <Train className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                              ) : (
+                                <Bus className="h-5 w-5 text-green-600 dark:text-green-400" />
+                              )}
                             </div>
-                            <div className="flex items-center gap-4 sm:flex-col sm:items-end sm:gap-2 w-full sm:w-auto">
-                              <div className="flex-1 sm:flex-none">
-                                <div className="text-sm font-semibold">₹{r.price}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {r.seats > 0 ? `${r.seats} seats` : "Waitlist"}
-                                </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-semibold">{result.operator}</span>
+                                <span className={`text-xs px-2 py-0.5 rounded ${result.seats > 0 ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'}`}>
+                                  {result.seats > 0 ? `${result.seats} seats` : 'Sold out'}
+                                </span>
                               </div>
-                              <Button
-                                size="sm"
-                                onClick={() => handleBookNow(r)}
-                                disabled={r.seats === 0}
-                                className="text-xs px-3 py-1 flex-shrink-0"
-                              >
-                                {r.seats > 0 ? "Book Now" : "Waitlist"}
-                              </Button>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Clock className="h-3 w-3" />
+                                <span>{result.depart} - {result.arrive}</span>
+                                <span>•</span>
+                                <span>{result.duration}</span>
+                              </div>
                             </div>
                           </div>
+                          <div className="flex items-center gap-3 w-full sm:w-auto">
+                            <div className="text-right flex-1 sm:flex-initial">
+                              <div className="text-2xl font-bold">₹{result.price}</div>
+                              <div className="text-xs text-muted-foreground">per person</div>
+                            </div>
+                            <Button
+                              onClick={() => handleBookNow(result)}
+                              disabled={result.seats === 0}
+                              className="w-full sm:w-auto"
+                            >
+                              Book Now
+                            </Button>
+                          </div>
                         </div>
-                      ))}
-                    </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
 
-                    <div className="grid grid-cols-2 sm:flex gap-2 pt-2">
-                      <Button variant="outline" size="sm" className="flex-1 bg-transparent text-xs" asChild>
-                        <a href="https://www.redbus.in" target="_blank" rel="noopener noreferrer">
-                          RedBus
-                        </a>
-                      </Button>
-                      <Button variant="outline" size="sm" className="flex-1 bg-transparent text-xs" asChild>
-                        <a href="https://www.irctc.co.in" target="_blank" rel="noopener noreferrer">
-                          IRCTC
-                        </a>
-                      </Button>
-                      <Button variant="outline" size="sm" className="flex-1 bg-transparent text-xs" asChild>
-                        <a href="https://www.makemytrip.com" target="_blank" rel="noopener noreferrer">
-                          Flights
-                        </a>
-                      </Button>
-                      <Button variant="outline" size="sm" className="flex-1 bg-transparent text-xs" asChild>
-                        <a href="https://www.booking.com" target="_blank" rel="noopener noreferrer">
-                          Hotels
-                        </a>
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
+              {results && results.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  No routes available for the selected date and time.
+                </div>
+              )}
             </Card>
+          </TabsContent>
 
-            {/* Places Section */}
-            <Card className="border-border/60 bg-card/60 backdrop-blur">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-chart-2" />
-                  {to ? `Places in ${to}` : "AI Recommendations"}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {recommendation?.aiSummary && (
-                  <div className="p-3 rounded-lg bg-muted/30 border border-border/60 text-sm text-muted-foreground leading-relaxed animate-in fade-in duration-500">
-                    {recommendation.aiSummary}
-                  </div>
-                )}
+          <TabsContent value="bookings" className="mt-4 sm:mt-6">
+            <MyBookings />
+          </TabsContent>
+        </Tabs>
 
-                {recommendation?.localTips && recommendation.localTips.length > 0 && (
-                  <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
-                    <h4 className="text-sm font-semibold mb-2 text-blue-800 dark:text-blue-200">Local Tips</h4>
-                    <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
-                      {recommendation.localTips.map((tip, idx) => (
-                        <li key={idx} className="flex items-start gap-2">
-                          <span className="text-blue-500 mt-0.5">•</span>
-                          <span>{tip}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {isLoadingRecommendation && (
-                  <div className="p-3 rounded-lg bg-muted/30 border border-border/60 space-y-2">
-                    <div className="h-3 bg-muted/50 rounded animate-pulse" />
-                    <div className="h-3 bg-muted/50 rounded animate-pulse w-5/6" />
-                  </div>
-                )}
-
-                {!recommendation && !isLoadingRecommendation && (
-                  <div className="text-center py-8 text-muted-foreground text-sm">
-                    Enter a destination to see AI-powered recommendations
-                  </div>
-                )}
-
-                {recommendation?.places.map((place, idx) => (
-                  <button
-                    key={place.name}
-                    onClick={() => setSelectedPlace(place)}
-                    className="w-full flex flex-col sm:flex-row gap-3 text-left hover:bg-muted/30 p-3 rounded-lg transition-all hover:scale-[1.02] animate-in slide-in-from-right duration-300"
-                    style={{ animationDelay: `${idx * 100}ms` }}
-                  >
-                    <img
-                      src={`https://images.unsplash.com/400x300/?${encodeURIComponent(place.image)}`}
-                      alt={place.name}
-                      className="w-full sm:w-24 h-32 sm:h-16 object-cover rounded-md border border-border/60"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement
-                        target.src = `https://via.placeholder.com/400x300/6366f1/white?text=${encodeURIComponent(place.name)}`
-                      }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
-                        <div className="text-sm font-medium truncate flex-1">{place.name}</div>
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                          <span className="text-xs text-muted-foreground">{place.rating.toFixed(1)}</span>
-                        </div>
-                      </div>
-                      <div className="text-xs text-muted-foreground line-clamp-2 mb-2">{place.description}</div>
-                      <div className="flex flex-wrap gap-2 text-xs">
-                        <span className="bg-muted/50 px-2 py-0.5 rounded">{place.category}</span>
-                        <span className="text-muted-foreground">{place.estimatedDuration}</span>
-                        <span className="text-blue-600 dark:text-blue-400">{place.bestTimeToVisit}</span>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Map Section */}
-            <Card className="border-border/60 bg-card/60 backdrop-blur xl:col-span-3">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Sparkles className="h-4 w-4" />
-                  Popular Destinations
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <DestinationRecommendations />
-              </CardContent>
-            </Card>
+        {notification && (
+          <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg animate-in slide-in-from-bottom">
+            {notification}
           </div>
-        </TabsContent>
+        )}
 
-        <TabsContent value="bookings">
-          <MyBookings />
-        </TabsContent>
-      </Tabs>
-
-      <BookingModal
-        isOpen={bookingModal.isOpen}
-        onClose={() => setBookingModal({ isOpen: false, data: null })}
-        bookingData={bookingModal.data}
-      />
-    </>
+        <BookingModal
+          isOpen={bookingModal.isOpen}
+          onClose={() => setBookingModal({ isOpen: false, data: null })}
+          bookingData={bookingModal.data}
+        />
+      </div>
+    </div>
   )
 }

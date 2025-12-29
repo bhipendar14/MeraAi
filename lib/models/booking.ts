@@ -1,8 +1,15 @@
 import { ObjectId } from 'mongodb'
 
+export interface PassengerDetails {
+  name: string
+  email: string
+  phone: string
+  age: number
+}
+
 export interface Booking {
   _id?: ObjectId
-  userId: ObjectId
+  userId: string  // Changed from ObjectId to string
   bookingId: string
   type: 'train' | 'bus' | 'flight' | 'hotel'
   from: string
@@ -10,6 +17,8 @@ export interface Booking {
   departureDate: string
   returnDate?: string
   passengers: number
+  passengerDetails?: PassengerDetails  // Old field - for backward compatibility
+  passengersList?: PassengerDetails[]  // New field - array of all passengers
   status: 'confirmed' | 'pending' | 'cancelled'
   totalPrice: number
   bookingDetails: {
@@ -19,6 +28,12 @@ export interface Booking {
     roomType?: string
     checkIn?: string
     checkOut?: string
+    operator?: string
+    airline?: string
+    flightNumber?: string
+    departureTime?: string
+    arrivalTime?: string
+    duration?: string
   }
   createdAt: Date
   updatedAt: Date

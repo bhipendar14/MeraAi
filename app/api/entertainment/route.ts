@@ -1,10 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { gemini, extractJson } from "@/lib/ai-gemini"
 
-const YOUTUBE_API_KEY = "AIzaSyAQpx6o0nJHtoVJe5XCEUQE06nkw_A6Dzo"
-const SPOTIFY_CLIENT_ID = "8e1b98272d2d4f34b1c7d41b3ce0c1fb"
-const SPOTIFY_CLIENT_SECRET = "14311604af364de6b135335b2649aaa1"
-const OMDB_API_KEY = process.env.OMDB_API_KEY || "a820102" // Get free key from http://www.omdbapi.com/apikey.aspx
+const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || "AIzaSyAQpx6o0nJHtoVJe5XCEUQE06nkw_A6Dzo"
+const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID || "8e1b98272d2d4f34b1c7d41b3ce0c1fb"
+const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET || "14311604af364de6b135335b2649aaa1"
+const OMDB_API_KEY = process.env.OMDB_API_KEY || "a820102"
+
 
 // Spotify API functions
 async function getSpotifyAccessToken(): Promise<string> {
@@ -206,12 +207,12 @@ async function getRealMoviesByCategory(category: string) {
 
   for (let i = 0; i < maxMovies; i += batchSize) {
     const batch = movieTitles.slice(i, Math.min(i + batchSize, maxMovies))
-    console.log(`[Entertainment API] Processing batch ${Math.floor(i/batchSize) + 1}: ${batch.join(', ')}`)
+    console.log(`[Entertainment API] Processing batch ${Math.floor(i / batchSize) + 1}: ${batch.join(', ')}`)
 
     const batchPromises = batch.map(async (title, index) => {
       try {
         const omdbUrl = `https://www.omdbapi.com/?t=${encodeURIComponent(title)}&apikey=${OMDB_API_KEY}&plot=short`
-        
+
         const omdbResponse = await fetch(omdbUrl, {
           headers: {
             'Accept': 'application/json',
@@ -276,13 +277,13 @@ async function getRealMoviesByCategory(category: string) {
   console.log(`[Entertainment API] 🎬 Total fetched: ${movies.length} movies for category: ${category}`)
   return movies.filter(movie => movie && movie.title && movie.overview && movie.id)
 }
-
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const type = searchParams.get("type") || "youtube"
   const category = searchParams.get("category") || "trending"
+  const searchQuery = searchParams.get("q") // Add search query support
 
-  console.log(`[Entertainment API] Request for type: ${type}, category: ${category}`)
+  console.log(`[Entertainment API] Request for type: ${type}, category: ${category}, query: ${searchQuery}`)
 
   try {
     if (type === "movies") {
@@ -296,20 +297,20 @@ export async function GET(req: NextRequest) {
         console.log(`[Entertainment API] Starting movie fetch for ${category}`)
         movies = await getRealMoviesByCategory(category)
         console.log(`[Entertainment API] Movie fetch completed: ${movies.length} movies`)
-        
+
         // If no movies returned, try a simple direct fetch
         if (movies.length === 0) {
           console.log(`[Entertainment API] No movies returned, trying direct fetch...`)
           const testMovies = ['Oppenheimer', 'Barbie', 'John Wick', 'The Dark Knight', 'Inception']
-          
+
           for (const title of testMovies.slice(0, 3)) {
             try {
               const url = `https://www.omdbapi.com/?t=${encodeURIComponent(title)}&apikey=${OMDB_API_KEY}&plot=short`
-              const response = await fetch(url, { 
+              const response = await fetch(url, {
                 headers: { 'Accept': 'application/json' },
                 signal: AbortSignal.timeout(3000)
               })
-              
+
               if (response.ok) {
                 const data = await response.json()
                 if (data.Response === 'True' && data.Type === 'movie') {
@@ -374,44 +375,73 @@ ${movies
       })
 
     } else if (type === "music") {
-      // MUSIC SECTION - Real Spotify Data with Categories
-      console.log(`[Entertainment API] Fetching ${category} music from Spotify...`)
+      // MUSIC SECTION - Real Spotify Data with Categories or Search
+      console.log(`[Entertainment API] Fetching music - query: ${searchQuery}, category: ${category}`)
 
       let tracks: any[] = []
       let summary = `Discover the hottest ${category.replace('_', ' ')} music right now!`
 
       try {
-        tracks = await getSpotifyMusicByCategory(category)
+        // If search query provided, search Spotify directly
+        if (searchQuery) {
+          const token = await getSpotifyAccessToken()
+          const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=50&market=US`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
 
-        // Generate AI summary for music category
-        if (tracks.length > 0) {
-          try {
-            const summaryPrompt = `Summarize these ${category.replace('_', ' ')} music tracks in 2-3 engaging sentences. Focus on what's popular in this category right now.
+          if (response.ok) {
+            const data = await response.json()
+            tracks = data.tracks?.items?.filter((track: any) => track && track.id).map((track: any) => ({
+              id: track.id,
+              title: track.name,
+              artist: track.artists.map((a: any) => a.name).join(', '),
+              album: track.album.name,
+              image: track.album.images[0]?.url || '',
+              preview_url: track.preview_url,
+              spotify_url: track.external_urls.spotify,
+              duration: track.duration_ms,
+              popularity: track.popularity,
+              category: 'search'
+            })) || []
+
+            summary = tracks.length > 0
+              ? `Found ${tracks.length} tracks for "${searchQuery}"`
+              : `No tracks found for "${searchQuery}"`
+          }
+        } else {
+          // Use category-based fetch
+          tracks = await getSpotifyMusicByCategory(category)
+
+          // Generate AI summary for music category
+          if (tracks.length > 0) {
+            try {
+              const summaryPrompt = `Summarize these ${category.replace('_', ' ')} music tracks in 2-3 engaging sentences. Focus on what's popular in this category right now.
 Tracks:
 ${tracks
-                .slice(0, 5)
-                .map((t: any) => `- "${t.title}" by ${t.artist} (Popularity: ${t.popularity}/100)`)
-                .join("\n")}`
+                  .slice(0, 5)
+                  .map((t: any) => `- "${t.title}" by ${t.artist} (Popularity: ${t.popularity}/100)`)
+                  .join("\n")}`
 
-            console.log(`[Entertainment API] Generating AI summary for ${category} music...`)
-            summary = await gemini(summaryPrompt, true)
-          } catch (e) {
-            console.error("[Entertainment API] Failed to generate music summary:", e)
-            const topArtists = tracks.slice(0, 3).map((t: any) => t.artist).join(", ")
-            summary = `The ${category.replace('_', ' ')} music scene is dominated by incredible tracks from artists like ${topArtists} and many more. These songs are capturing listeners worldwide with their innovative sounds and compelling performances.`
+              console.log(`[Entertainment API] Generating AI summary for ${category} music...`)
+              summary = await gemini(summaryPrompt, true)
+            } catch (e) {
+              console.error("[Entertainment API] Failed to generate music summary:", e)
+              const topArtists = tracks.slice(0, 3).map((t: any) => t.artist).join(", ")
+              summary = `The ${category.replace('_', ' ')} music scene is dominated by incredible tracks from artists like ${topArtists} and many more. These songs are capturing listeners worldwide with their innovative sounds and compelling performances.`
+            }
           }
         }
       } catch (error) {
         console.error(`[Entertainment API] Error fetching music:`, error)
         // Return empty array but don't throw error
         tracks = []
-        summary = `Unable to load ${category.replace('_', ' ')} music at the moment. Please try again later.`
+        summary = `Unable to load ${searchQuery ? 'search results' : category.replace('_', ' ') + ' music'} at the moment. Please try again later.`
       }
 
       return NextResponse.json({
         items: tracks,
         summary,
-        category,
+        category: searchQuery ? 'search' : category,
         total: tracks.length
       })
 
