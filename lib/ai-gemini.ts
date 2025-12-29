@@ -88,3 +88,33 @@ export async function geminiVision(prompt: string, base64Data: string) {
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ""
   return text
 }
+
+/**
+ * Extract JSON from AI response text
+ * Handles markdown code blocks and raw JSON
+ */
+export function extractJson<T = any>(text: string): T | null {
+  try {
+    // Try to extract JSON from markdown code blocks
+    const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/```\s*([\s\S]*?)\s*```/)
+
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[1].trim()) as T
+    }
+
+    // Try to parse as raw JSON
+    const jsonStart = text.indexOf('{')
+    const jsonEnd = text.lastIndexOf('}')
+
+    if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+      const jsonStr = text.substring(jsonStart, jsonEnd + 1)
+      return JSON.parse(jsonStr) as T
+    }
+
+    // Try parsing the entire text
+    return JSON.parse(text) as T
+  } catch (error) {
+    console.error('[extractJson] Failed to parse JSON:', error)
+    return null
+  }
+}
