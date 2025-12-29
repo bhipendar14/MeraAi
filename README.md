@@ -7,7 +7,7 @@
 
 > **Experience the future of AI interaction** - A comprehensive super app featuring AI research, entertainment, travel booking, stock market analysis, tech tools, and more. Built with cutting-edge technologies and powered by Google Gemini AI.
 
-![MeraAI Banner](https://images.unsplash.com/photo-1677442136019-21780ecad995?w=1200&h=400&fit=crop&q=80)
+![MeraAI Banner](https://drive.google.com/file/d/1ihCVYIUeO4_567xjCkfX4yQC-L1GzcG_/view?usp=sharing)
 
 ---
 
@@ -116,6 +116,7 @@ GEMINI_API_KEY=your_gemini_api_key
 # SEARCH & MEDIA
 # ======================================
 YOUTUBE_API_KEY=your_youtube_data_api_key
+YOUTUBE_API_KEY_ID=your_youtube_project_id
 CUSTOM_SEARCH_API_KEY=your_google_custom_search_key
 CUSTOM_SEARCH_ENGINE_ID=your_search_engine_id
 
