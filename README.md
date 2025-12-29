@@ -7,7 +7,7 @@
 
 > **Experience the future of AI interaction** - A comprehensive super app featuring AI research, entertainment, travel booking, stock market analysis, tech tools, and more. Built with cutting-edge technologies and powered by Google Gemini AI.
 
-![MeraAI Banner](https://drive.google.com/file/d/1ihCVYIUeO4_567xjCkfX4yQC-L1GzcG_/view?usp=sharing)
+![MeraAI Banner](https://drive.google.com/uc?export=view&id=1ihCVYIUeO4_567xjCkfX4yQC-L1GzcG_)
 
 ---
 
