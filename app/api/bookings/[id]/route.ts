@@ -30,8 +30,8 @@ export async function DELETE(
     const booking = await db
       .collection<Booking>('bookings')
       .findOne({ 
-        _id: ObjectId.createFromHexString(bookingId),
-        userId: ObjectId.createFromHexString(decoded.id)
+        _id: new ObjectId(bookingId),
+        userId: new ObjectId(decoded.id)
       })
 
     if (!booking) {
@@ -47,8 +47,8 @@ export async function DELETE(
       .collection<Booking>('bookings')
       .updateOne(
         { 
-          _id: ObjectId.createFromHexString(bookingId),
-          userId: ObjectId.createFromHexString(decoded.id)
+          _id: new ObjectId(bookingId),
+          userId: new ObjectId(decoded.id)
         },
         { 
           $set: { 
@@ -97,8 +97,8 @@ export async function GET(
     const booking = await db
       .collection<Booking>('bookings')
       .findOne({ 
-        _id: ObjectId.createFromHexString(bookingId),
-        userId: ObjectId.createFromHexString(decoded.id)
+        _id: new ObjectId(bookingId),
+        userId: new ObjectId(decoded.id)
       })
 
     if (!booking) {

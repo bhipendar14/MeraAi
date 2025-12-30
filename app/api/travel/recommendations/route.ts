@@ -81,7 +81,7 @@ async function generatePlacesWithAI(destination: string): Promise<any[]> {
 
     Return only valid JSON array, no other text.`
 
-    const response = await gemini(placesPrompt, true)
+    const response = await gemini(placesPrompt)
     const places = JSON.parse(response)
 
     if (Array.isArray(places) && places.length > 0) {
@@ -162,8 +162,7 @@ export async function GET(request: NextRequest) {
       let aiSummary = ''
       try {
         aiSummary = await gemini(
-          `Write a comprehensive travel guide summary for ${destination}. Include information about the best time to visit, local culture, must-try food, transportation tips, and what makes this destination unique. Keep it engaging and informative, around 150-200 words.`,
-          true
+          `Write a comprehensive travel guide summary for ${destination}. Include information about the best time to visit, local culture, must-try food, transportation tips, and what makes this destination unique. Keep it engaging and informative, around 150-200 words.`
         )
       } catch (error) {
         aiSummary = `${destination.charAt(0).toUpperCase() + destination.slice(1)} is a vibrant destination with rich culture, amazing attractions, and unforgettable experiences waiting to be explored!`
@@ -173,8 +172,7 @@ export async function GET(request: NextRequest) {
       let localTips: string[] = []
       try {
         const tipsResponse = await gemini(
-          `Provide 5 practical local tips for travelers visiting ${destination}. Format as a simple list, each tip should be concise and actionable.`,
-          true
+          `Provide 5 practical local tips for travelers visiting ${destination}. Format as a simple list, each tip should be concise and actionable.`
         )
         localTips = tipsResponse.split('\n').filter((tip: string) => tip.trim().length > 0).slice(0, 5)
       } catch (error) {
