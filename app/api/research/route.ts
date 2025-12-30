@@ -202,8 +202,8 @@ async function getGoogleLinks(query: string) {
 
 // Get Google images
 async function getGoogleImages(query: string) {
-    const apiKey = process.env.CUSTOM_SEARCH_API_KEY || "AIzaSyCNEDYF-_R7iFiR2zsizLRg84uozldfvbo"
-    const cx = process.env.CUSTOM_SEARCH_ENGINE_ID || "2263b218e4a6c47fd"
+    const apiKey = process.env.CUSTOM_SEARCH_API_KEY
+    const cx = process.env.CUSTOM_SEARCH_ENGINE_ID
 
     try {
         const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${encodeURIComponent(query)}&searchType=image&num=6`
