@@ -104,7 +104,7 @@ Create a `.env.local` file in the root directory:
 # ======================================
 # DATABASE
 # ======================================
-MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/meraai
+MONGO_URI=Mongodburi
 JWT_SECRET=your_super_secret_jwt_key_min_32_characters
 
 # ======================================
