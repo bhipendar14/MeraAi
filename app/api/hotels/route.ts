@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { searchDestinationImages } from '@/lib/unsplash'
 
-const RAPIDAPI_KEY = 'b73a73bcedmshcd32ef5126dfc02p1f7158jsn4b7061d755a9'
+const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY
 const RAPIDAPI_HOST = 'booking-com15.p.rapidapi.com'
 
 // Hotel amenities options

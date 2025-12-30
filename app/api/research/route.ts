@@ -162,7 +162,7 @@ async function getYouTubeVideos(query: string) {
 // Get Google web links
 async function getGoogleLinks(query: string) {
     const apiKey = process.env.CUSTOM_SEARCH_API_KEY
-    const cx = process.env.CUSTOM_SEARCH_ENGINE_ID || "2263b218e4a6c47fd"
+    const cx = process.env.CUSTOM_SEARCH_ENGINE_ID
 
     try {
         const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${encodeURIComponent(query)}&num=5`

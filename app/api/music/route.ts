@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID || "8e1b98272d2d4f34b1c7d41b3ce0c1fb"
-const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET || "14311604af364de6b135335b2649aaa1"
+const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID
+const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET
 
 interface Track {
     id: string

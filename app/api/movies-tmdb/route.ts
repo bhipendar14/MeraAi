@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-const TMDB_API_KEY = "953183a685bd087ada698b41474f5791"
+const TMDB_API_KEY = process.env.TMDB_API_KEY
 const TMDB_BASE_URL = "https://api.themoviedb.org/3"
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p"
 

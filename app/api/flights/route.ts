@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const AVIATIONSTACK_API_KEY = '22decc05eeb3372795c6e0c3932c4a05'
+const AVIATIONSTACK_API_KEY = process.env.AVIATIONSTACK_API_KEY
 const AVIATIONSTACK_BASE_URL = 'http://api.aviationstack.com/v1'
 
 // Major airport codes database

@@ -124,6 +124,7 @@ CUSTOM_SEARCH_ENGINE_ID=your_search_engine_id
 # ENTERTAINMENT
 # ======================================
 OMDB_API_KEY=your_omdb_api_key
+TMDB_API_KEY=your_tmdb_api_key
 SPOTIFY_CLIENT_ID=your_spotify_client_id
 SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
 
@@ -134,10 +135,12 @@ NEWS_API_KEY=your_news_api_key
 ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key
 
 # ======================================
-# MAPS & TRAVEL
+# MAPS & TRAVEL & hotel
 # ======================================
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_key
 UNSPLASH_ACCESS_KEY=your_unsplash_access_key
+AVIATIONSTACK_API_KEY=your_aviationstack_api_key
+RAPIDAPI_KEY=your_rapidapi_key
 
 # ======================================
 # ANALYTICS (Optional)
