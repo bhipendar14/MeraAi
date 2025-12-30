@@ -3,6 +3,9 @@ import { connectToDatabase } from '@/lib/mongodb'
 import { TravelRecommendation } from '@/lib/models/booking'
 import { gemini } from '@/lib/ai-gemini'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 // City coordinates for generating realistic locations
 const CITY_COORDINATES: Record<string, { lat: number; lng: number }> = {
   mumbai: { lat: 19.0760, lng: 72.8777 },
@@ -47,10 +50,10 @@ async function generatePlacesWithAI(destination: string): Promise<any[]> {
   try {
     // First try to find exact match
     let cityCoords = CITY_COORDINATES[destination.toLowerCase()]
-    
+
     // If not found, try partial matching
     if (!cityCoords) {
-      const partialMatch = Object.keys(CITY_COORDINATES).find(city => 
+      const partialMatch = Object.keys(CITY_COORDINATES).find(city =>
         city.includes(destination.toLowerCase()) || destination.toLowerCase().includes(city)
       )
       if (partialMatch) {
@@ -58,7 +61,7 @@ async function generatePlacesWithAI(destination: string): Promise<any[]> {
         destination = partialMatch // Use the matched city name
       }
     }
-    
+
     // If still not found, use a default location (Delhi)
     if (!cityCoords) {
       cityCoords = CITY_COORDINATES.delhi
@@ -80,11 +83,11 @@ async function generatePlacesWithAI(destination: string): Promise<any[]> {
 
     const response = await gemini(placesPrompt, true)
     const places = JSON.parse(response)
-    
+
     if (Array.isArray(places) && places.length > 0) {
       return places
     }
-    
+
     throw new Error('Invalid AI response')
   } catch (error) {
     console.error('AI generation failed, using fallback:', error)
@@ -95,10 +98,10 @@ async function generatePlacesWithAI(destination: string): Promise<any[]> {
 
 function generateFallbackPlaces(destination: string): any[] {
   let cityCoords = CITY_COORDINATES[destination.toLowerCase()]
-  
+
   // Try partial matching if exact match not found
   if (!cityCoords) {
-    const partialMatch = Object.keys(CITY_COORDINATES).find(city => 
+    const partialMatch = Object.keys(CITY_COORDINATES).find(city =>
       city.includes(destination.toLowerCase()) || destination.toLowerCase().includes(city)
     )
     if (partialMatch) {
@@ -113,7 +116,7 @@ function generateFallbackPlaces(destination: string): any[] {
 
   const categories = ["Historical", "Religious", "Nature", "Architecture", "Cultural", "Shopping"]
   const places = []
-  
+
   for (let i = 0; i < 6; i++) {
     places.push({
       name: `${destination} Attraction ${i + 1}`,
@@ -127,7 +130,7 @@ function generateFallbackPlaces(destination: string): any[] {
       estimatedDuration: i % 3 === 0 ? "2-3 hours" : i % 3 === 1 ? "1-2 hours" : "Half day"
     })
   }
-  
+
   return places
 }
 
@@ -141,7 +144,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { db } = await connectToDatabase()
-    
+
     // Check if we have cached recommendations
     let recommendation = await db
       .collection<TravelRecommendation>('travel_recommendations')
@@ -150,7 +153,7 @@ export async function GET(request: NextRequest) {
     if (!recommendation) {
       // Generate new recommendation using AI
       const places = await generatePlacesWithAI(destination)
-      
+
       if (places.length === 0) {
         return NextResponse.json({ error: 'Unable to generate recommendations for this destination' }, { status: 404 })
       }

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { searchDestinationImages } from '@/lib/unsplash'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY
 const RAPIDAPI_HOST = 'booking-com15.p.rapidapi.com'
 

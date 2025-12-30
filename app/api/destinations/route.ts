@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { searchDestinationImages } from '@/lib/unsplash'
 import { gemini } from '@/lib/ai-gemini'
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic'
+
 // Expanded worldwide destinations database with background images
 const POPULAR_DESTINATIONS = [
     // Asia
@@ -110,7 +113,7 @@ const POPULAR_DESTINATIONS = [
     { name: 'Bratsk', country: 'Russia', continent: 'Asia', lat: 56.1513, lng: 101.6342, image: 'https://source.unsplash.com/800x600/?bratsk' },
     { name: 'Angarsk', country: 'Russia', continent: 'Asia', lat: 52.5448, lng: 103.8885, image: 'https://source.unsplash.com/800x600/?angarsk' },
 
-// ---------- SOUTH KOREA ----------
+    // ---------- SOUTH KOREA ----------
     { name: 'Incheon', country: 'South Korea', continent: 'Asia', lat: 37.4563, lng: 126.7052, image: 'https://source.unsplash.com/800x600/?incheon' },
     { name: 'Daegu', country: 'South Korea', continent: 'Asia', lat: 35.8714, lng: 128.6014, image: 'https://source.unsplash.com/800x600/?daegu' },
     { name: 'Daejeon', country: 'South Korea', continent: 'Asia', lat: 36.3504, lng: 127.3845, image: 'https://source.unsplash.com/800x600/?daejeon' },
@@ -122,7 +125,7 @@ const POPULAR_DESTINATIONS = [
     { name: 'Jeonju', country: 'South Korea', continent: 'Asia', lat: 35.8242, lng: 127.1480, image: 'https://source.unsplash.com/800x600/?jeonju' },
     { name: 'Yeosu', country: 'South Korea', continent: 'Asia', lat: 34.7604, lng: 127.6622, image: 'https://source.unsplash.com/800x600/?yeosu' },
 
-// ---------- THAILAND ----------
+    // ---------- THAILAND ----------
     { name: 'Krabi', country: 'Thailand', continent: 'Asia', lat: 8.0863, lng: 98.9063, image: 'https://source.unsplash.com/800x600/?krabi' },
     { name: 'Pattaya', country: 'Thailand', continent: 'Asia', lat: 12.9236, lng: 100.8825, image: 'https://source.unsplash.com/800x600/?pattaya' },
     { name: 'Hua Hin', country: 'Thailand', continent: 'Asia', lat: 12.5684, lng: 99.9577, image: 'https://source.unsplash.com/800x600/?hua+hin' },
@@ -134,7 +137,7 @@ const POPULAR_DESTINATIONS = [
     { name: 'Nan', country: 'Thailand', continent: 'Asia', lat: 18.7756, lng: 100.7730, image: 'https://source.unsplash.com/800x600/?nan+thailand' },
     { name: 'Trat', country: 'Thailand', continent: 'Asia', lat: 12.2427, lng: 102.5175, image: 'https://source.unsplash.com/800x600/?trat+thailand' },
 
-// ---------- VIETNAM ----------
+    // ---------- VIETNAM ----------
     { name: 'Da Nang', country: 'Vietnam', continent: 'Asia', lat: 16.0544, lng: 108.2022, image: 'https://source.unsplash.com/800x600/?da+nang' },
     { name: 'Hoi An', country: 'Vietnam', continent: 'Asia', lat: 15.8801, lng: 108.3380, image: 'https://source.unsplash.com/800x600/?hoi+an' },
     { name: 'Nha Trang', country: 'Vietnam', continent: 'Asia', lat: 12.2388, lng: 109.1967, image: 'https://source.unsplash.com/800x600/?nha+trang' },
@@ -146,7 +149,7 @@ const POPULAR_DESTINATIONS = [
     { name: 'Quy Nhon', country: 'Vietnam', continent: 'Asia', lat: 13.7563, lng: 109.2297, image: 'https://source.unsplash.com/800x600/?quy+nhon' },
     { name: 'Pleiku', country: 'Vietnam', continent: 'Asia', lat: 13.9833, lng: 108.0000, image: 'https://source.unsplash.com/800x600/?pleiku' },
 
-// ---------- INDONESIA ----------
+    // ---------- INDONESIA ----------
     { name: 'Surabaya', country: 'Indonesia', continent: 'Asia', lat: -7.2575, lng: 112.7521, image: 'https://source.unsplash.com/800x600/?surabaya' },
     { name: 'Bandung', country: 'Indonesia', continent: 'Asia', lat: -6.9175, lng: 107.6191, image: 'https://source.unsplash.com/800x600/?bandung' },
     { name: 'Semarang', country: 'Indonesia', continent: 'Asia', lat: -6.9667, lng: 110.4167, image: 'https://source.unsplash.com/800x600/?semarang' },
@@ -158,14 +161,14 @@ const POPULAR_DESTINATIONS = [
     { name: 'Banjarmasin', country: 'Indonesia', continent: 'Asia', lat: -3.3186, lng: 114.5944, image: 'https://source.unsplash.com/800x600/?banjarmasin' },
     { name: 'Jayapura', country: 'Indonesia', continent: 'Asia', lat: -2.5916, lng: 140.6690, image: 'https://source.unsplash.com/800x600/?jayapura' },
 
-// ---------- TAIWAN ----------
+    // ---------- TAIWAN ----------
     { name: 'Kaohsiung', country: 'Taiwan', continent: 'Asia', lat: 22.6273, lng: 120.3014, image: 'https://source.unsplash.com/800x600/?kaohsiung' },
     { name: 'Taichung', country: 'Taiwan', continent: 'Asia', lat: 24.1477, lng: 120.6736, image: 'https://source.unsplash.com/800x600/?taichung' },
     { name: 'Tainan', country: 'Taiwan', continent: 'Asia', lat: 22.9997, lng: 120.2270, image: 'https://source.unsplash.com/800x600/?tainan' },
     { name: 'Hsinchu', country: 'Taiwan', continent: 'Asia', lat: 24.8138, lng: 120.9675, image: 'https://source.unsplash.com/800x600/?hsinchu' },
     { name: 'Keelung', country: 'Taiwan', continent: 'Asia', lat: 25.1276, lng: 121.7392, image: 'https://source.unsplash.com/800x600/?keelung' },
 
-// ---------- PHILIPPINES ----------
+    // ---------- PHILIPPINES ----------
     { name: 'Davao', country: 'Philippines', continent: 'Asia', lat: 7.1907, lng: 125.4553, image: 'https://source.unsplash.com/800x600/?davao' },
     { name: 'Iloilo', country: 'Philippines', continent: 'Asia', lat: 10.7202, lng: 122.5621, image: 'https://source.unsplash.com/800x600/?iloilo' },
     { name: 'Cagayan de Oro', country: 'Philippines', continent: 'Asia', lat: 8.4542, lng: 124.6319, image: 'https://source.unsplash.com/800x600/?cagayan+de+oro' },
@@ -173,7 +176,7 @@ const POPULAR_DESTINATIONS = [
     { name: 'Zamboanga', country: 'Philippines', continent: 'Asia', lat: 6.9214, lng: 122.0790, image: 'https://source.unsplash.com/800x600/?zamboanga' },
     { name: 'Tagaytay', country: 'Philippines', continent: 'Asia', lat: 14.1153, lng: 120.9621, image: 'https://source.unsplash.com/800x600/?tagaytay' },
 
-// ---------- EUROPE ----------
+    // ---------- EUROPE ----------
     { name: 'Paris', country: 'France', continent: 'Europe', lat: 48.8566, lng: 2.3522, image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800' },
     { name: 'London', country: 'UK', continent: 'Europe', lat: 51.5074, lng: -0.1278, image: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800' },
     { name: 'Rome', country: 'Italy', continent: 'Europe', lat: 41.9028, lng: 12.4964, image: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=800' },
