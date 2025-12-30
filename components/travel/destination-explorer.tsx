@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Search, MapPin, Sparkles, Star, TrendingUp, Plane, Building2, Train } from "lucide-react"
+import { ImageLightbox } from "@/components/ui/image-lightbox"
 
 interface Destination {
     name: string
@@ -32,6 +33,9 @@ export function DestinationExplorer({ onNavigateToFlights, onNavigateToHotels, o
     const [selectedDestination, setSelectedDestination] = useState<Destination | null>(null)
     const [isLoading, setIsLoading] = useState(false)
     const [popularDestinations, setPopularDestinations] = useState<Destination[]>([])
+    const [lightboxOpen, setLightboxOpen] = useState(false)
+    const [lightboxImages, setLightboxImages] = useState<Array<{ url: string; thumb: string; alt: string; photographer?: string }>>([])
+    const [lightboxIndex, setLightboxIndex] = useState(0)
     const scrollRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -149,11 +153,18 @@ export function DestinationExplorer({ onNavigateToFlights, onNavigateToHotels, o
                     {selectedDestination.images && selectedDestination.images.length > 0 && (
                         <Card className="border-border/60 bg-card/60 backdrop-blur overflow-hidden">
                             <CardContent className="p-0">
-                                <div className="relative h-64 sm:h-80 md:h-96">
+                                <div
+                                    className="relative h-64 sm:h-80 md:h-96 cursor-pointer group"
+                                    onClick={() => {
+                                        setLightboxImages(selectedDestination.images || [])
+                                        setLightboxIndex(0)
+                                        setLightboxOpen(true)
+                                    }}
+                                >
                                     <img
                                         src={selectedDestination.images[0].url}
                                         alt={selectedDestination.images[0].alt}
-                                        className="w-full h-full object-cover"
+                                        className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300"
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                                     <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
@@ -162,6 +173,10 @@ export function DestinationExplorer({ onNavigateToFlights, onNavigateToHotels, o
                                             <MapPin className="h-4 w-4" />
                                             <span>{selectedDestination.country}</span>
                                         </div>
+                                    </div>
+                                    {/* Hover hint */}
+                                    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/50 backdrop-blur px-3 py-1.5 rounded-full text-white text-sm">
+                                        Click to enlarge
                                     </div>
                                 </div>
                             </CardContent>
@@ -230,12 +245,26 @@ export function DestinationExplorer({ onNavigateToFlights, onNavigateToHotels, o
                                 <h3 className="font-semibold mb-3">Explore {selectedDestination.name}</h3>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                                     {selectedDestination.images.slice(1).map((img, idx) => (
-                                        <div key={idx} className="relative aspect-video overflow-hidden rounded-lg group">
+                                        <div
+                                            key={idx}
+                                            className="relative aspect-video overflow-hidden rounded-lg group cursor-pointer"
+                                            onClick={() => {
+                                                setLightboxImages(selectedDestination.images || [])
+                                                setLightboxIndex(idx + 1)
+                                                setLightboxOpen(true)
+                                            }}
+                                        >
                                             <img
                                                 src={img.url}
                                                 alt={img.alt}
                                                 className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-300"
                                             />
+                                            {/* Hover Overlay */}
+                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
+                                                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-white text-sm font-medium">
+                                                    Click to view
+                                                </div>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -327,6 +356,15 @@ export function DestinationExplorer({ onNavigateToFlights, onNavigateToHotels, o
                         ))}
                     </div>
                 </div>
+            )}
+
+            {/* Image Lightbox */}
+            {lightboxOpen && lightboxImages.length > 0 && (
+                <ImageLightbox
+                    images={lightboxImages}
+                    initialIndex={lightboxIndex}
+                    onClose={() => setLightboxOpen(false)}
+                />
             )}
         </div>
     )
