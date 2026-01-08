@@ -407,8 +407,6 @@ git push origin feature/amazing-feature
 
 ## 📄 License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
-
 You are free to:
 - ✅ Use commercially
 - ✅ Modify
@@ -433,9 +431,9 @@ Special thanks to:
 ## 📞 Support & Contact
 
 - **GitHub Issues**: [Report bugs or request features](https://github.com/bhipendar14/MeraAi/issues)
-- **Discussions**: [Ask questions and share ideas](https://github.com/bhipendar14/MeraAi/discussions)
+- **Discussions**: [Ask questions and share ideas](https://profile-ten-navy.vercel.app/)
 - **Email**: bhipendar14@gmail.com
-- **Twitter**: [@bhipendar14](https://twitter.com/bhipendar14) _(if applicable)_
+- **Twitter**: [@bhipendar14](https://x.com/Bhipendar?t=qteP4M5BvI-NEvRyd6pVyQ&s=09)
 
 ---
 
@@ -450,16 +448,16 @@ If you find this project useful, please consider giving it a ⭐️ on GitHub!
 ## 📸 Screenshots
 
 ### Home Page
-![Home Page](https://via.placeholder.com/800x400?text=Home+Page)
+![Home Page](https://drive.google.com/uc?export=view&id=1ihCVYIUeO4_567xjCkfX4yQC-L1GzcG_)
 
 ### AI Research
-![Research Page](https://via.placeholder.com/800x400?text=AI+Research)
+![Research Page](https://drive.google.com/file/d/1qViCbChrIfL9G32LeGUeELkK17XCYY45)
 
 ### Entertainment
-![Entertainment](https://via.placeholder.com/800x400?text=Entertainment)
+![Entertainment](https://drive.google.com/file/d/1pWNN_vxk92HuerRIPiCDlXFYinDA8lxh)
 
 ### Stock Market
-![Stocks](https://via.placeholder.com/800x400?text=Stock+Market)
+![Stocks](https://drive.google.com/file/d/1WLYljHdnxMAgTJzr6KZ26oUIfkWpHxxg)
 
 ---
 
