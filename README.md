@@ -447,18 +447,28 @@ If you find this project useful, please consider giving it a ⭐️ on GitHub!
 
 ## 📸 Screenshots
 
-### Home Page
+
+## 🏠 Home Page
+
 ![Home Page](https://drive.google.com/uc?export=view&id=1ihCVYIUeO4_567xjCkfX4yQC-L1GzcG_)
 
-### AI Research
-![Research Page](https://drive.google.com/file/d/1qViCbChrIfL9G32LeGUeELkK17XCYY45)
+---
 
-### Entertainment
-![Entertainment](https://drive.google.com/file/d/1pWNN_vxk92HuerRIPiCDlXFYinDA8lxh)
+## 🔬 AI Research
 
-### Stock Market
-![Stocks](https://drive.google.com/file/d/1WLYljHdnxMAgTJzr6KZ26oUIfkWpHxxg)
+![Research Page](https://drive.google.com/uc?export=view&id=1qViCbChrIfL9G32LeGUeELkK17XCYY45)
 
+---
+
+## 🎬 Entertainment
+
+![Entertainment](https://drive.google.com/uc?export=view&id=1pWNN_vxk92HuerRIPiCDlXFYinDA8lxh)
+
+---
+
+## 📈 Stock Market
+
+![Stocks](https://drive.google.com/uc?export=view&id=1WLYljHdnxMAgTJzr6KZ26oUIfkWpHxxg)
 ---
 
 <div align="center">
