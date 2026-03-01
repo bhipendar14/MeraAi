@@ -3,6 +3,8 @@ import { connectToDatabase } from '@/lib/mongodb'
 import { getTokenFromRequest, verifyToken } from '@/lib/auth'
 import { ObjectId } from 'mongodb'
 
+export const dynamic = 'force-dynamic'
+
 // GET - Admin only: Fetch all bookings with user details
 export async function GET(req: NextRequest) {
     try {

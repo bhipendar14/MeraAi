@@ -39,6 +39,7 @@ export function ChatHistory() {
   const { token } = useAuth()
 
   const fetchHistory = async () => {
+    if (!token) return;
     try {
       const response = await fetch('/api/chat-history', {
         headers: {
@@ -62,7 +63,7 @@ export function ChatHistory() {
 
   const handleClearHistory = async () => {
     setClearLoading(true)
-    
+
     try {
       const response = await fetch('/api/chat-history', {
         method: 'DELETE',
@@ -86,7 +87,7 @@ export function ChatHistory() {
 
   useEffect(() => {
     fetchHistory()
-  }, [])
+  }, [token])
 
   if (loading) {
     return (
@@ -161,7 +162,7 @@ export function ChatHistory() {
                   {new Date(chat.createdAt).toLocaleString()}
                 </span>
               </div>
-              
+
               <div className="space-y-2 max-h-32 overflow-y-auto">
                 {chat.messages.slice(0, 3).map((message, index) => (
                   <div key={index} className="text-sm">
@@ -169,8 +170,8 @@ export function ChatHistory() {
                       {message.role === 'user' ? 'You: ' : 'AI: '}
                     </span>
                     <span className="text-foreground">
-                      {message.content.length > 100 
-                        ? `${message.content.substring(0, 100)}...` 
+                      {message.content.length > 100
+                        ? `${message.content.substring(0, 100)}...`
                         : message.content
                       }
                     </span>

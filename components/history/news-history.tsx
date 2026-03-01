@@ -25,6 +25,7 @@ export function NewsHistory() {
     const { token } = useAuth()
 
     const fetchHistory = async () => {
+        if (!token) return;
         try {
             const response = await fetch('/api/history?category=news', {
                 headers: {

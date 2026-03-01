@@ -24,6 +24,7 @@ export function StocksHistory() {
     const { token } = useAuth()
 
     const fetchHistory = async () => {
+        if (!token) return;
         try {
             const response = await fetch('/api/history?category=stocks', {
                 headers: {

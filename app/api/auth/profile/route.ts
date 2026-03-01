@@ -3,6 +3,8 @@ import { connectToDatabase } from '@/lib/mongodb'
 import { getTokenFromRequest, verifyToken, hashPassword, comparePassword, validateEmail, validatePhone, validatePassword } from '@/lib/auth'
 import { ObjectId } from 'mongodb'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   try {
     const token = getTokenFromRequest(req)
@@ -74,13 +76,13 @@ export async function PUT(req: NextRequest) {
       if (!validateEmail(email)) {
         return NextResponse.json({ error: 'Invalid email format' }, { status: 400 })
       }
-      
+
       // Check if email already exists
       const existingUser = await users.findOne({ email, _id: { $ne: new ObjectId(user.id) } })
       if (existingUser) {
         return NextResponse.json({ error: 'Email already exists' }, { status: 400 })
       }
-      
+
       updateData.email = email
     }
 

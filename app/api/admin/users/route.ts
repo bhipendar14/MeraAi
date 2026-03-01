@@ -3,6 +3,8 @@ import { connectToDatabase } from '@/lib/mongodb'
 import { getTokenFromRequest, verifyToken } from '@/lib/auth'
 import { ObjectId } from 'mongodb'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
     try {
         const token = getTokenFromRequest(req)
