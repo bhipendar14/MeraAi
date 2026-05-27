@@ -378,64 +378,371 @@ ${movies
       // MUSIC SECTION - Real Spotify Data with Categories or Search
       console.log(`[Entertainment API] Fetching music - query: ${searchQuery}, category: ${category}`)
 
+      const FALLBACK_TRACKS: Record<string, any[]> = {
+        trending: [
+          {
+            id: "fallback-trending-1",
+            title: "Blinding Lights",
+            artist: "The Weeknd",
+            album: "After Hours",
+            image: "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&h=300&fit=crop",
+            preview_url: null,
+            spotify_url: "https://open.spotify.com/track/0VjIjW4GlmCwq5v2kCUSik",
+            duration: 200040,
+            popularity: 96,
+            category: "trending"
+          },
+          {
+            id: "fallback-trending-2",
+            title: "Shape of You",
+            artist: "Ed Sheeran",
+            album: "÷ (Deluxe)",
+            image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&h=300&fit=crop",
+            preview_url: null,
+            spotify_url: "https://open.spotify.com/track/7qiZjo2v65Qr80m2Iefs2m",
+            duration: 233712,
+            popularity: 88,
+            category: "trending"
+          },
+          {
+            id: "fallback-trending-3",
+            title: "As It Was",
+            artist: "Harry Styles",
+            album: "Harry's House",
+            image: "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=300&h=300&fit=crop",
+            preview_url: null,
+            spotify_url: "https://open.spotify.com/track/4D7wQ4XPN3IQn4VKIvj1gX",
+            duration: 167303,
+            popularity: 92,
+            category: "trending"
+          },
+          {
+            id: "fallback-trending-4",
+            title: "Cruel Summer",
+            artist: "Taylor Swift",
+            album: "Lover",
+            image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&h=300&fit=crop",
+            preview_url: null,
+            spotify_url: "https://open.spotify.com/track/1BxfEX2gvl2RPjLgSTZ4uR",
+            duration: 178426,
+            popularity: 95,
+            category: "trending"
+          },
+          {
+            id: "fallback-trending-5",
+            title: "Flowers",
+            artist: "Miley Cyrus",
+            album: "Endless Summer Vacation",
+            image: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=300&h=300&fit=crop",
+            preview_url: null,
+            spotify_url: "https://open.spotify.com/track/0y457Nspv2816694m47xh8",
+            duration: 200455,
+            popularity: 90,
+            category: "trending"
+          },
+          {
+            id: "fallback-trending-6",
+            title: "Stay",
+            artist: "The Kid LAROI, Justin Bieber",
+            album: "F*CK LOVE 3: OVER YOU",
+            image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&h=300&fit=crop",
+            preview_url: null,
+            spotify_url: "https://open.spotify.com/track/5ocUzXjS6QhD216a7ur5s0",
+            duration: 141805,
+            popularity: 89,
+            category: "trending"
+          }
+        ],
+        pop: [
+          {
+            id: "fallback-pop-1",
+            title: "Levitating",
+            artist: "Dua Lipa",
+            album: "Future Nostalgia",
+            image: "https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=300&h=300&fit=crop",
+            preview_url: null,
+            spotify_url: "https://open.spotify.com/track/39LLxExzy6HrmG2hkbuFFC",
+            duration: 203064,
+            popularity: 87,
+            category: "pop"
+          },
+          {
+            id: "fallback-pop-2",
+            title: "Bad Habits",
+            artist: "Ed Sheeran",
+            album: "= (Equal)",
+            image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&h=300&fit=crop",
+            preview_url: null,
+            spotify_url: "https://open.spotify.com/track/37ZJwqUyvJdugzi3j73wHF",
+            duration: 231041,
+            popularity: 85,
+            category: "pop"
+          },
+          {
+            id: "fallback-pop-3",
+            title: "Watermelon Sugar",
+            artist: "Harry Styles",
+            album: "Fine Line",
+            image: "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=300&h=300&fit=crop",
+            preview_url: null,
+            spotify_url: "https://open.spotify.com/track/6Uel4q5xbrImKbq2Xj6HXT",
+            duration: 174000,
+            popularity: 89,
+            category: "pop"
+          },
+          {
+            id: "fallback-pop-4",
+            title: "Anti-Hero",
+            artist: "Taylor Swift",
+            album: "Midnights",
+            image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&h=300&fit=crop",
+            preview_url: null,
+            spotify_url: "https://open.spotify.com/track/0V3wN9qRzrjKAp4YrA6R3g",
+            duration: 200690,
+            popularity: 91,
+            category: "pop"
+          }
+        ],
+        hip_hop: [
+          {
+            id: "fallback-hiphop-1",
+            title: "SICKO MODE",
+            artist: "Travis Scott",
+            album: "ASTROWORLD",
+            image: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=300&h=300&fit=crop",
+            preview_url: null,
+            spotify_url: "https://open.spotify.com/track/2EEeDO81Zt618v6Zg5zrR7",
+            duration: 312820,
+            popularity: 88,
+            category: "hip_hop"
+          },
+          {
+            id: "fallback-hiphop-2",
+            title: "HUMBLE.",
+            artist: "Kendrick Lamar",
+            album: "DAMN.",
+            image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&h=300&fit=crop",
+            preview_url: null,
+            spotify_url: "https://open.spotify.com/track/7KXj2qV7w8n545Br5t2g8k",
+            duration: 177000,
+            popularity: 89,
+            category: "hip_hop"
+          },
+          {
+            id: "fallback-hiphop-3",
+            title: "God's Plan",
+            artist: "Drake",
+            album: "Scorpion",
+            image: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=300&h=300&fit=crop",
+            preview_url: null,
+            spotify_url: "https://open.spotify.com/track/6DCZie21yWPFH6J60w01UI",
+            duration: 198973,
+            popularity: 90,
+            category: "hip_hop"
+          },
+          {
+            id: "fallback-hiphop-4",
+            title: "Starboy",
+            artist: "The Weeknd, Daft Punk",
+            album: "Starboy",
+            image: "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&h=300&fit=crop",
+            preview_url: null,
+            spotify_url: "https://open.spotify.com/track/7mxKG0V1YIwN56CcgvxPkz",
+            duration: 230453,
+            popularity: 92,
+            category: "hip_hop"
+          }
+        ],
+        most_liked: [
+          {
+            id: "fallback-liked-1",
+            title: "Someone You Loved",
+            artist: "Lewis Capaldi",
+            album: "Divinely Uninspired to a Hellish Extent",
+            image: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=300&h=300&fit=crop",
+            preview_url: null,
+            spotify_url: "https://open.spotify.com/track/7qEHYZzo2g2Q418W2e48y0",
+            duration: 182160,
+            popularity: 88,
+            category: "most_liked"
+          },
+          {
+            id: "fallback-liked-2",
+            title: "Perfect",
+            artist: "Ed Sheeran",
+            album: "÷ (Deluxe)",
+            image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&h=300&fit=crop",
+            preview_url: null,
+            spotify_url: "https://open.spotify.com/track/0tgGo55zsyu7t7f9q67N03",
+            duration: 263400,
+            popularity: 89,
+            category: "most_liked"
+          }
+        ],
+        most_viewed: [
+          {
+            id: "fallback-viewed-1",
+            title: "SICKO MODE",
+            artist: "Travis Scott",
+            album: "ASTROWORLD",
+            image: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=300&h=300&fit=crop",
+            preview_url: null,
+            spotify_url: "https://open.spotify.com/track/2EEeDO81Zt618v6Zg5zrR7",
+            duration: 312820,
+            popularity: 88,
+            category: "most_viewed"
+          },
+          {
+            id: "fallback-viewed-2",
+            title: "HUMBLE.",
+            artist: "Kendrick Lamar",
+            album: "DAMN.",
+            image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&h=300&fit=crop",
+            preview_url: null,
+            spotify_url: "https://open.spotify.com/track/7KXj2qV7w8n545Br5t2g8k",
+            duration: 177000,
+            popularity: 89,
+            category: "most_viewed"
+          }
+        ],
+        viral: [
+          {
+            id: "fallback-viral-1",
+            title: "Espresso",
+            artist: "Sabrina Carpenter",
+            album: "Short n' Sweet",
+            image: "https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=300&h=300&fit=crop",
+            preview_url: null,
+            spotify_url: "https://open.spotify.com/track/24I6435b6c38b259T8b8c8",
+            duration: 175450,
+            popularity: 97,
+            category: "viral"
+          },
+          {
+            id: "fallback-viral-2",
+            title: "Gata Only",
+            artist: "FloyyMenor, Cris Mj",
+            album: "Gata Only",
+            image: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=300&h=300&fit=crop",
+            preview_url: null,
+            spotify_url: "https://open.spotify.com/track/6XjDF6nd4ycRz9i8T6b8c8",
+            duration: 222000,
+            popularity: 94,
+            category: "viral"
+          }
+        ],
+        new_releases: [
+          {
+            id: "fallback-new-1",
+            title: "Fortnight",
+            artist: "Taylor Swift, Post Malone",
+            album: "THE TORTURED POETS DEPARTMENT",
+            image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&h=300&fit=crop",
+            preview_url: null,
+            spotify_url: "https://open.spotify.com/track/2OIcr2wGvl2RPjLgSTZ4uR",
+            duration: 228940,
+            popularity: 93,
+            category: "new_releases"
+          },
+          {
+            id: "fallback-new-2",
+            title: "LUNCH",
+            artist: "Billie Eilish",
+            album: "HIT ME HARD AND SOFT",
+            image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&h=300&fit=crop",
+            preview_url: null,
+            spotify_url: "https://open.spotify.com/track/6D3wN9qRzrjKAp4YrA6R3g",
+            duration: 180000,
+            popularity: 95,
+            category: "new_releases"
+          }
+        ]
+      }
+
       let tracks: any[] = []
       let summary = `Discover the hottest ${category.replace('_', ' ')} music right now!`
 
       try {
         // If search query provided, search Spotify directly
         if (searchQuery) {
-          const token = await getSpotifyAccessToken()
-          const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=50&market=US`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          })
+          try {
+            const token = await getSpotifyAccessToken()
+            const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=50&market=US`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            })
 
-          if (response.ok) {
-            const data = await response.json()
-            tracks = data.tracks?.items?.filter((track: any) => track && track.id).map((track: any) => ({
-              id: track.id,
-              title: track.name,
-              artist: track.artists.map((a: any) => a.name).join(', '),
-              album: track.album.name,
-              image: track.album.images[0]?.url || '',
-              preview_url: track.preview_url,
-              spotify_url: track.external_urls.spotify,
-              duration: track.duration_ms,
-              popularity: track.popularity,
-              category: 'search'
-            })) || []
+            if (response.ok) {
+              const data = await response.json()
+              tracks = data.tracks?.items?.filter((track: any) => track && track.id).map((track: any) => ({
+                id: track.id,
+                title: track.name,
+                artist: track.artists.map((a: any) => a.name).join(', '),
+                album: track.album.name,
+                image: track.album.images[0]?.url || '',
+                preview_url: track.preview_url,
+                spotify_url: track.external_urls.spotify,
+                duration: track.duration_ms,
+                popularity: track.popularity,
+                category: 'search'
+              })) || []
 
-            summary = tracks.length > 0
-              ? `Found ${tracks.length} tracks for "${searchQuery}"`
-              : `No tracks found for "${searchQuery}"`
+              summary = tracks.length > 0
+                ? `Found ${tracks.length} tracks for "${searchQuery}"`
+                : `No tracks found for "${searchQuery}"`
+            }
+          } catch (searchError) {
+            console.error('[Entertainment API] Spotify live search failed:', searchError)
+          }
+
+          // Fallback search in offline catalog
+          if (tracks.length === 0) {
+            const allTracks = Object.values(FALLBACK_TRACKS).flat()
+            const queryLower = searchQuery.toLowerCase()
+            tracks = allTracks.filter(t => 
+              t.title.toLowerCase().includes(queryLower) || 
+              t.artist.toLowerCase().includes(queryLower) ||
+              t.album.toLowerCase().includes(queryLower)
+            ).filter((track, index, self) =>
+              self.findIndex(t => t.id === track.id) === index
+            )
+            summary = `Found ${tracks.length} curated tracks for "${searchQuery}" from offline catalog.`
           }
         } else {
           // Use category-based fetch
           tracks = await getSpotifyMusicByCategory(category)
 
-          // Generate AI summary for music category
-          if (tracks.length > 0) {
-            try {
-              const summaryPrompt = `Summarize these ${category.replace('_', ' ')} music tracks in 2-3 engaging sentences. Focus on what's popular in this category right now.
+          // Fallback if Spotify API fails or returns no items
+          if (tracks.length === 0) {
+            console.warn(`[Entertainment API] Spotify API failed for category: ${category}. Loading fallback catalog.`)
+            tracks = FALLBACK_TRACKS[category] || FALLBACK_TRACKS.trending
+            const topArtists = tracks.slice(0, 3).map((t: any) => t.artist).join(", ")
+            summary = `Curated ${category.replace('_', ' ')} music featuring ${topArtists} and more (Loaded from offline catalog).`
+          } else {
+            // Generate AI summary for music category
+            if (tracks.length > 0) {
+              try {
+                const summaryPrompt = `Summarize these ${category.replace('_', ' ')} music tracks in 2-3 engaging sentences. Focus on what's popular in this category right now.
 Tracks:
 ${tracks
-                  .slice(0, 5)
-                  .map((t: any) => `- "${t.title}" by ${t.artist} (Popularity: ${t.popularity}/100)`)
-                  .join("\n")}`
+                    .slice(0, 5)
+                    .map((t: any) => `- "${t.title}" by ${t.artist} (Popularity: ${t.popularity}/100)`)
+                    .join("\n")}`
 
-              console.log(`[Entertainment API] Generating AI summary for ${category} music...`)
-              summary = await gemini(summaryPrompt, true)
-            } catch (e) {
-              console.error("[Entertainment API] Failed to generate music summary:", e)
-              const topArtists = tracks.slice(0, 3).map((t: any) => t.artist).join(", ")
-              summary = `The ${category.replace('_', ' ')} music scene is dominated by incredible tracks from artists like ${topArtists} and many more. These songs are capturing listeners worldwide with their innovative sounds and compelling performances.`
+                console.log(`[Entertainment API] Generating AI summary for ${category} music...`)
+                summary = await gemini(summaryPrompt, true)
+              } catch (e) {
+                console.error("[Entertainment API] Failed to generate music summary:", e)
+                const topArtists = tracks.slice(0, 3).map((t: any) => t.artist).join(", ")
+                summary = `The ${category.replace('_', ' ')} music scene is dominated by incredible tracks from artists like ${topArtists} and many more. These songs are capturing listeners worldwide with their innovative sounds and compelling performances.`
+              }
             }
           }
         }
       } catch (error) {
         console.error(`[Entertainment API] Error fetching music:`, error)
-        // Return empty array but don't throw error
-        tracks = []
-        summary = `Unable to load ${searchQuery ? 'search results' : category.replace('_', ' ') + ' music'} at the moment. Please try again later.`
+        tracks = FALLBACK_TRACKS[category] || FALLBACK_TRACKS.trending
+        const topArtists = tracks.slice(0, 3).map((t: any) => t.artist).join(", ")
+        summary = `Curated ${category.replace('_', ' ')} music featuring ${topArtists} and more (Loaded from offline catalog).`
       }
 
       return NextResponse.json({
